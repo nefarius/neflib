@@ -252,7 +252,7 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
 
 std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* classGuid,
                                                                        const std::wstring& filterName,
-                                                                       DeviceClassFilterPosition position, bool& found)
+                                                                       DeviceClassFilterPosition position)
 {
 	HKEYHandleGuard key(SetupDiOpenClassRegKey(classGuid, KEY_READ));
 
@@ -304,14 +304,13 @@ std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUI
 		{
 			if (filterName == &temp[index])
 			{
-				found = true;
-				break;
+				return true;
 			}
 			index += len + 1;
 			len = wcslen(&temp[index]);
 		}
 
-		return true;
+		return false;
 	}
 	//
 	// Value doesn't exist, return
