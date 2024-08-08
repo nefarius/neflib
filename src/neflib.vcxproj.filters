@@ -54,6 +54,9 @@
     <ClInclude Include="..\include\nefarius\neflib\MiscWinApi.hpp">
       <Filter>Header Files\Public</Filter>
     </ClInclude>
+    <ClInclude Include="ScopeGuardHelper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="UniUtil.cpp">

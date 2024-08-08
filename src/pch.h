@@ -30,6 +30,11 @@
 #include <scope_guard.hpp>
 
 //
+// Internal stuff
+// 
+#include "ScopeGuardHelper.hpp"
+
+//
 // Public headers
 // 
 #include <nefarius/neflib/UniUtil.hpp>

@@ -186,6 +186,7 @@
     <ClInclude Include="..\include\nefarius\neflib\UniUtil.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\Win32Error.hpp" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="ScopeGuardHelper.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClassFilter.cpp" />

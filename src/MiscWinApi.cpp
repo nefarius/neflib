@@ -32,13 +32,12 @@ std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::IsAppRunn
 {
 	PSID adminSID = nullptr;
 
-	const auto guard = sg::make_scope_guard([adminSID]() noexcept
-	{
-		if (adminSID)
-		{
-			FreeSid(adminSID);
-		}
-	});
+	SCOPE_GUARD_CAPTURE(adminSID, {
+	                    if (adminSID)
+	                    {
+	                    FreeSid(adminSID);
+	                    }
+	                    });
 
 	// Allocate and initialize a SID of the administrators group.
 	SID_IDENTIFIER_AUTHORITY authority = SECURITY_NT_AUTHORITY;
@@ -63,4 +62,59 @@ std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::IsAppRunn
 	}
 
 	return isMember != FALSE;
+}
+
+std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::AdjustProcessPrivileges()
+{
+	HANDLE procToken;
+	LUID luid;
+	TOKEN_PRIVILEGES tp;
+
+	if (!OpenProcessToken(
+		GetCurrentProcess(),
+		TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+		&procToken
+	))
+	{
+		return std::unexpected(utilities::Win32Error("OpenProcessToken"));
+	}
+
+	SCOPE_GUARD_CAPTURE(procToken, {
+	                    if (procToken)
+	                    {
+	                    CloseHandle(procToken);
+	                    }
+	                    });
+
+	if (!LookupPrivilegeValue(nullptr, SE_LOAD_DRIVER_NAME, &luid))
+	{
+		return std::unexpected(utilities::Win32Error("LookupPrivilegeValue"));
+	}
+
+	tp.PrivilegeCount = 1;
+	tp.Privileges[0].Luid = luid;
+	tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+	//
+	// AdjustTokenPrivileges can succeed even when privileges are not adjusted.
+	// In such case GetLastError returns ERROR_NOT_ALL_ASSIGNED.
+	//
+	// Hence, we check for GetLastError in both success and failure case.
+	//
+
+	(void)AdjustTokenPrivileges(
+		procToken,
+		FALSE,
+		&tp,
+		sizeof(TOKEN_PRIVILEGES),
+		nullptr,
+		nullptr
+	);
+
+	if (GetLastError() != ERROR_SUCCESS)
+	{
+		return std::unexpected(utilities::Win32Error("AdjustTokenPrivileges"));
+	}
+
+	return {};
 }
