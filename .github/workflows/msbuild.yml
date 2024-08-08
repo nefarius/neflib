@@ -28,7 +28,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: lukka/get-cmake@latest
+
+    - name: Setup anew (or from cache) vcpkg (and does not build any package)
+      uses: lukka/run-vcpkg@v11
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
