@@ -1,8 +1,11 @@
 #pragma once
 
+#include <nefarius/neflib/UniUtil.hpp>
 
 namespace nefarius::utilities
 {
+	using namespace nefarius::utilities;
+
 	class Win32Error
 	{
 	public:
