@@ -16,6 +16,7 @@
 #include <type_traits>
 #include <vector>
 #include <format>
+#include <expected>
 
 //
 // Public headers
@@ -27,3 +28,5 @@
 #include <nefarius/neflib/LibraryHelper.hpp>
 #include <nefarius/neflib/MultiStringArray.hpp>
 #include <nefarius/neflib/Win32Error.hpp>
+#include <nefarius/neflib/ClassFilter.hpp>
+
