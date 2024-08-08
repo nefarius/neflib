@@ -72,6 +72,22 @@ namespace
 		return buffer;
 	}
 
+	DWORD Win32FromHResult(HRESULT hr)
+	{
+		if ((hr & 0xFFFF0000) == MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, 0))
+		{
+			return HRESULT_CODE(hr);
+		}
+
+		if (hr == S_OK)
+		{
+			return ERROR_SUCCESS;
+		}
+
+		// Not a Win32 HRESULT so return a generic error code.
+		return ERROR_CAN_NOT_COMPLETE;
+	}
+
 	PWSTR wstristr(PCWSTR haystack, PCWSTR needle)
 	{
 		do
@@ -576,9 +592,10 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 	{
 		hasDefaultSection = TRUE;
 
-		if (StringCchPrintfW(pszDest, maxCmdLine, L"DefaultInstall 132 %ws", normalisedInfPath) < 0)
+		if (const HRESULT hr = StringCchPrintfW(pszDest, maxCmdLine, L"DefaultInstall 132 %ws", normalisedInfPath);
+			FAILED(hr))
 		{
-			return std::unexpected(Win32Error("StringCchPrintfW"));
+			return std::unexpected(Win32Error(::Win32FromHResult(hr), "StringCchPrintfW"));
 		}
 
 		//
@@ -709,9 +726,10 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std:
 			reinterpret_cast<PINFCONTEXT>(&sysInfo.lpMaximumApplicationAddress)
 		))
 	{
-		if (StringCchPrintfW(pszDest, maxCmdLine, L"DefaultUninstall 132 %ws", normalisedInfPath) < 0)
+		if (const HRESULT hr = StringCchPrintfW(pszDest, maxCmdLine, L"DefaultUninstall 132 %ws", normalisedInfPath);
+			FAILED(hr))
 		{
-			return std::unexpected(Win32Error("StringCchPrintfW"));
+			return std::unexpected(Win32Error(::Win32FromHResult(hr), "StringCchPrintfW"));
 		}
 
 		//
