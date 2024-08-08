@@ -615,8 +615,8 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
-		DetourAttach((void**)&real_MessageBoxW, DetourMessageBoxW);
-		DetourAttach((void**)&real_RestartDialogEx, DetourRestartDialogEx);
+		DetourAttach((void**)&real_MessageBoxW, DetourMessageBoxW);  // NOLINT(clang-diagnostic-microsoft-cast)
+		DetourAttach((void**)&real_RestartDialogEx, DetourRestartDialogEx);  // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
 
 		g_MbCalled = FALSE;
@@ -626,8 +626,8 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
-		DetourDetach((void**)&real_MessageBoxW, DetourMessageBoxW);
-		DetourDetach((void**)&real_RestartDialogEx, DetourRestartDialogEx);
+		DetourDetach((void**)&real_MessageBoxW, DetourMessageBoxW);  // NOLINT(clang-diagnostic-microsoft-cast)
+		DetourDetach((void**)&real_RestartDialogEx, DetourRestartDialogEx);  // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
 
 		//
@@ -751,14 +751,14 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std:
 
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
-		DetourAttach((void**)&real_RestartDialogEx, DetourRestartDialogEx);
+		DetourAttach((void**)&real_RestartDialogEx, DetourRestartDialogEx);  // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
 
 		InstallHinfSectionW(nullptr, nullptr, pszDest, 0);
 
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
-		DetourDetach((void**)&real_RestartDialogEx, DetourRestartDialogEx);
+		DetourDetach((void**)&real_RestartDialogEx, DetourRestartDialogEx);  // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
 
 		if (rebootRequired)
