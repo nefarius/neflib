@@ -890,6 +890,10 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 				SetupDiDestroyDriverInfoList(hDevInfo.get(), &spDevInfoData, SPDIT_COMPATDRIVER);
 			});
 
+			SCOPE_GUARD_CAPTURE({
+			                    SetupDiDestroyDriverInfoList(hDevInfo.get(), &spDevInfoData, SPDIT_COMPATDRIVER);
+			                    }, &hDevInfo, &spDevInfoData);
+
 			// Get the first info item for this driver
 			SP_DRVINFO_DATA drvInfo = {};
 			drvInfo.cbSize = sizeof(SP_DRVINFO_DATA);
