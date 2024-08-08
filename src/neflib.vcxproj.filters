@@ -13,5 +13,8 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\Public">
+      <UniqueIdentifier>{657b304c-8616-4ed8-8f3c-412b8bae675a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
