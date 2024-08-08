@@ -9,7 +9,9 @@
       "name": "vcpkg-msbuild",
       "host": true
     },
-    "wil"
+    "wil",
+    "detours",
+    "scope-guard"
   ],
   "features": {},
   "supports": "windows & static & !uwp",

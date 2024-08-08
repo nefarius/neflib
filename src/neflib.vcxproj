@@ -176,6 +176,7 @@
   <ItemGroup>
     <ClInclude Include="..\include\nefarius\neflib\ClassFilter.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\Devcon.hpp" />
+    <ClInclude Include="..\include\nefarius\neflib\GenHandleGuard.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\HDEVINFOHandleGuard.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\HKEYHandleGuard.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\INFHandleGuard.hpp" />

@@ -48,6 +48,9 @@
     <ClInclude Include="..\include\nefarius\neflib\Devcon.hpp">
       <Filter>Header Files\Public</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\nefarius\neflib\GenHandleGuard.hpp">
+      <Filter>Header Files\Public</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="UniUtil.cpp">

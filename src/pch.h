@@ -6,8 +6,10 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
+#include <ShlObj.h>
 #include <SetupAPI.h>
 #include <newdev.h>
+#include <tchar.h>
 
 //
 // Include consumed STL
@@ -22,6 +24,8 @@
 // Vcpkg dependencies
 // 
 #include <wil/resource.h>
+#include <detours/detours.h>
+#include <scope_guard.hpp>
 
 //
 // Public headers
@@ -30,6 +34,7 @@
 #include <nefarius/neflib/HDEVINFOHandleGuard.hpp>
 #include <nefarius/neflib/HKEYHandleGuard.hpp>
 #include <nefarius/neflib/INFHandleGuard.hpp>
+#include <nefarius/neflib/GenHandleGuard.hpp>
 #include <nefarius/neflib/LibraryHelper.hpp>
 #include <nefarius/neflib/MultiStringArray.hpp>
 #include <nefarius/neflib/Win32Error.hpp>

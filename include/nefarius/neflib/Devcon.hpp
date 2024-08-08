@@ -87,4 +87,16 @@ namespace nefarius::devcon
 	 */
 	std::expected<void, nefarius::utilities::Win32Error> UninstallDriver(const std::wstring& fullInfPath,
 	                                                                     bool* rebootRequired);
+
+	std::vector<std::expected<void, nefarius::utilities::Win32Error>> UninstallDeviceAndDriver(
+		const GUID* classGuid, const std::wstring& hardwareId, bool* rebootRequired);
+
+	std::expected<void, nefarius::utilities::Win32Error> InfDefaultInstall(const std::wstring& fullInfPath,
+	                                                                         bool* rebootRequired);
+
+	std::expected<void, nefarius::utilities::Win32Error> InfDefaultUninstall(
+		const std::wstring& fullInfPath, bool* rebootRequired);
+
+	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error> FindByHwId(
+		const std::wstring& matchstring);
 }
