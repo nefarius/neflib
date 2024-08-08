@@ -1,10 +1,14 @@
 {
   "name": "neflib",
   "version": "1.0.0",
-  "description": "A collection of my C/C++ utilities :)",
+  "description": "A collection of my C/C++ utilities.",
   "homepage": "https://github.com/nefarius/neflib",
   "license": "MIT",
   "dependencies": [
+    {
+      "name": "vcpkg-msbuild",
+      "host": "true"
+    },
     "wil"
   ],
   "features": {},
