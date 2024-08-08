@@ -775,7 +775,6 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std:
 std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefarius::devcon::FindByHwId(
 	const std::wstring& matchstring)
 {
-	bool found = FALSE;
 	DWORD total = 0;
 	SP_DEVINFO_DATA spDevInfoData;
 
@@ -836,7 +835,6 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 		// If we have a match, print out the whole array
 		if (foundMatch)
 		{
-			found = TRUE;
 			total++;
 
 			FindByHwIdResult result{entries};
