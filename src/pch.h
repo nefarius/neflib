@@ -19,6 +19,11 @@
 #include <expected>
 
 //
+// Vcpkg dependencies
+// 
+#include <wil/resource.h>
+
+//
 // Public headers
 // 
 #include <nefarius/neflib/UniUtil.hpp>
@@ -29,4 +34,4 @@
 #include <nefarius/neflib/MultiStringArray.hpp>
 #include <nefarius/neflib/Win32Error.hpp>
 #include <nefarius/neflib/ClassFilter.hpp>
-
+#include <nefarius/neflib/Devcon.hpp>
