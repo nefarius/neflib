@@ -7,11 +7,13 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <SetupAPI.h>
+#include <newdev.h>
 
 //
 // Include consumed STL
 // 
 #include <string>
+#include <type_traits>
 
 //
 // Public headers
@@ -21,3 +23,5 @@
 #include <nefarius/neflib/HDEVINFOHandleGuard.hpp>
 #include <nefarius/neflib/HKEYHandleGuard.hpp>
 #include <nefarius/neflib/INFHandleGuard.hpp>
+
+#include <nefarius/neflib/LibraryHelper.hpp>
