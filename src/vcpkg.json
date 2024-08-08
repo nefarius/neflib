@@ -5,10 +5,7 @@
   "homepage": "https://github.com/nefarius/neflib",
   "license": "MIT",
   "dependencies": [
-    {
-      "name": "wil",
-      "host": true
-    }
+    "wil"
   ],
   "features": {},
   "supports": "windows & static & !uwp",
