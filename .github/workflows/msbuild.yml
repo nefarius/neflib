@@ -41,6 +41,8 @@ jobs:
         runVcpkgInstall: true
         vcpkgJsonGlob: './src/vcpkg.json'
 
+    - run: vcpkg integrate install
+
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
 
