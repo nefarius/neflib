@@ -2,7 +2,7 @@
 
 namespace nefarius::utilities
 {
-	std::string ConvertWideToANSI(const std::wstring& wstr);
+	std::string ConvertWideToANSI(const std::wstring& wide);
 
-	std::wstring ConvertAnsiToWide(const std::string& str);
+	std::wstring ConvertAnsiToWide(const std::string& narrow);
 }
