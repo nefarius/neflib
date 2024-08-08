@@ -151,6 +151,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\nefarius\neflib\HDEVINFOHandleGuard.hpp" />
+    <ClInclude Include="..\include\nefarius\neflib\HKEYHandleGuard.hpp" />
+    <ClInclude Include="..\include\nefarius\neflib\INFHandleGuard.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\UniUtil.hpp" />
   </ItemGroup>
   <ItemGroup>

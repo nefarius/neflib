@@ -21,6 +21,15 @@
     <ClInclude Include="..\include\nefarius\neflib\UniUtil.hpp">
       <Filter>Header Files\Public</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\nefarius\neflib\INFHandleGuard.hpp">
+      <Filter>Header Files\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\nefarius\neflib\HDEVINFOHandleGuard.hpp">
+      <Filter>Header Files\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\nefarius\neflib\HKEYHandleGuard.hpp">
+      <Filter>Header Files\Public</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="UniUtil.cpp">
