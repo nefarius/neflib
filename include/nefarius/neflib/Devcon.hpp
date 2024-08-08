@@ -88,15 +88,61 @@ namespace nefarius::devcon
 	std::expected<void, nefarius::utilities::Win32Error> UninstallDriver(const std::wstring& fullInfPath,
 	                                                                     bool* rebootRequired);
 
+	/**
+	 * Uninstalls all devices and active function driver matched by provided device class and
+	 * Hardware ID.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	09.08.2024
+	 *
+	 * @param 		  	classGuid	  	Device class GUID.
+	 * @param 		  	hardwareId	  	Identifier for the hardware.
+	 * @param [in,out]	rebootRequired	If non-null, true if reboot required.
+	 *
+	 * @returns	A std::vector&lt;std::expected&lt;void,nefarius::utilities::Win32Error&gt;&gt;
+	 */
 	std::vector<std::expected<void, nefarius::utilities::Win32Error>> UninstallDeviceAndDriver(
 		const GUID* classGuid, const std::wstring& hardwareId, bool* rebootRequired);
 
+	/**
+	 * Installs a primitive driver.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	09.08.2024
+	 *
+	 * @param 		  	fullInfPath   	Full pathname of the INF file.
+	 * @param [in,out]	rebootRequired	If non-null, true if reboot required.
+	 *
+	 * @returns	A std::expected&lt;void,nefarius::utilities::Win32Error&gt;
+	 */
 	std::expected<void, nefarius::utilities::Win32Error> InfDefaultInstall(const std::wstring& fullInfPath,
-	                                                                         bool* rebootRequired);
+	                                                                       bool* rebootRequired);
 
+	/**
+	 * Uninstalls a primitive driver.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	09.08.2024
+	 *
+	 * @param 		  	fullInfPath   	Full pathname of the INF file.
+	 * @param [in,out]	rebootRequired	If non-null, true if reboot required.
+	 *
+	 * @returns	A std::expected&lt;void,nefarius::utilities::Win32Error&gt;
+	 */
 	std::expected<void, nefarius::utilities::Win32Error> InfDefaultUninstall(
 		const std::wstring& fullInfPath, bool* rebootRequired);
 
+	/**
+	 * Searches for devices matched by Hardware ID and returns a list of Hardware IDs, friendly
+	 * names and driver version information.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	09.08.2024
+	 *
+	 * @param 	matchstring	The partial string to search for.
+	 *
+	 * @returns	True if at least one match was found, false otherwise.
+	 */
 	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error> FindByHwId(
 		const std::wstring& matchstring);
 }
