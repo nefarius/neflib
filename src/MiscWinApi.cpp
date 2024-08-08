@@ -157,6 +157,38 @@ std::expected<PSID, nefarius::utilities::Win32Error> nefarius::winapi::GetLogonS
 	return std::unexpected(utilities::Win32Error(ERROR_NOT_FOUND));
 }
 
+std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::SetPrivilege(
+	LPCWSTR privilege, int enable, HANDLE process)
+{
+	TOKEN_PRIVILEGES tp;
+	LUID luid;
+	HANDLE token;
+
+	if (!OpenProcessToken(process, TOKEN_ADJUST_PRIVILEGES, &token))
+	{
+		return std::unexpected(utilities::Win32Error("OpenProcessToken"));
+	}
+
+	SCOPE_GUARD_CAPTURE({ CloseHandle(token); }, token);
+
+	if (!LookupPrivilegeValue(nullptr, privilege, &luid))
+	{
+		return std::unexpected(utilities::Win32Error("LookupPrivilegeValue"));
+	}
+
+	tp.PrivilegeCount = 1;
+	tp.Privileges[0].Luid = luid;
+	tp.Privileges[0].Attributes = enable ? SE_PRIVILEGE_ENABLED : FALSE;
+
+	// Enable the privilege or disable all privileges.
+	if (!AdjustTokenPrivileges(token, 0, &tp, NULL, nullptr, nullptr))
+	{
+		return std::unexpected(utilities::Win32Error("AdjustTokenPrivileges"));
+	}
+
+	return {};
+}
+
 std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services::CreateDriverService(PCSTR ServiceName,
 	PCSTR DisplayName, PCSTR BinaryPath)
 {

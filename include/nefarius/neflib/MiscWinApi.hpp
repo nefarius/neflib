@@ -13,6 +13,8 @@ namespace nefarius::winapi
 
 	std::expected<PSID, nefarius::utilities::Win32Error> GetLogonSID(HANDLE hToken);
 
+	std::expected<void, nefarius::utilities::Win32Error> SetPrivilege(LPCWSTR privilege, int enable, HANDLE process = GetCurrentProcess());
+
 	namespace services
 	{
 		std::expected<void, nefarius::utilities::Win32Error> CreateDriverService(PCSTR ServiceName, PCSTR DisplayName, PCSTR BinaryPath);
