@@ -1,0 +1,7 @@
+{
+  "registries": [],
+  "default-registry": {
+    "kind": "builtin",
+    "baseline": "2024.07.12"
+  }
+}
