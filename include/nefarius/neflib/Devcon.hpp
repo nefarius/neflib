@@ -3,6 +3,7 @@
 
 
 #include <nefarius/neflib/Win32Error.hpp>
+#include <nefarius/neflib/MultiStringArray.hpp>
 
 namespace nefarius::devcon
 {
