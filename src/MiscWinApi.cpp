@@ -119,6 +119,44 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::AdjustPro
 	return {};
 }
 
+std::expected<PSID, nefarius::utilities::Win32Error> nefarius::winapi::GetLogonSID(HANDLE hToken)
+{
+	DWORD dwLength = 0;
+	PTOKEN_GROUPS ptg = nullptr;
+
+	// Get required buffer size and allocate the TOKEN_GROUPS buffer.
+	(void)GetTokenInformation(hToken, TokenGroups, ptg, 0, &dwLength);
+
+	ptg = static_cast<PTOKEN_GROUPS>(HeapAlloc(
+		GetProcessHeap(),
+		HEAP_ZERO_MEMORY,
+		dwLength
+	));
+
+	// Get the token group information from the access token.
+	if (!GetTokenInformation(hToken, TokenGroups, ptg, dwLength, &dwLength))
+	{
+		return std::unexpected(utilities::Win32Error("GetTokenInformation"));
+	}
+
+	// Loop through the groups to find the logon SID.
+	for (DWORD dwIndex = 0; dwIndex < ptg->GroupCount; dwIndex++)
+	{
+		if ((ptg->Groups[dwIndex].Attributes & SE_GROUP_LOGON_ID) == SE_GROUP_LOGON_ID)
+		{
+			// Found the logon SID; make a copy of it.
+
+			dwLength = GetLengthSid(ptg->Groups[dwIndex].Sid);
+			PSID pSID = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwLength);
+			CopySid(dwLength, pSID, ptg->Groups[dwIndex].Sid);
+
+			return pSID;
+		}
+	}
+
+	return std::unexpected(utilities::Win32Error(ERROR_NOT_FOUND));
+}
+
 std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services::CreateDriverService(PCSTR ServiceName,
 	PCSTR DisplayName, PCSTR BinaryPath)
 {
