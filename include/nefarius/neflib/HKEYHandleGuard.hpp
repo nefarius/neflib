@@ -1,8 +1,5 @@
 #pragma once
 
-#include <handleapi.h>
-#include <minwindef.h>
-#include <winreg.h>
 
 namespace nefarius::utilities::guards
 {

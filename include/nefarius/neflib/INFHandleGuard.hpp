@@ -1,7 +1,5 @@
 #pragma once
 
-#include <handleapi.h>
-#include <SetupAPI.h>
 
 namespace nefarius::utilities::guards
 {
