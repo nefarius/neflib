@@ -51,6 +51,9 @@
     <ClInclude Include="..\include\nefarius\neflib\GenHandleGuard.hpp">
       <Filter>Header Files\Public</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\nefarius\neflib\MiscWinApi.hpp">
+      <Filter>Header Files\Public</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="UniUtil.cpp">
@@ -63,6 +66,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Devcon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MiscWinApi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

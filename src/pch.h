@@ -42,3 +42,4 @@
 #include <nefarius/neflib/Win32Error.hpp>
 #include <nefarius/neflib/ClassFilter.hpp>
 #include <nefarius/neflib/Devcon.hpp>
+#include <nefarius/neflib/MiscWinApi.hpp>
