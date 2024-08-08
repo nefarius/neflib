@@ -32,6 +32,8 @@ jobs:
 
     - name: Setup anew (or from cache) vcpkg (and does not build any package)
       uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: '8b9bcb28e258026532f8d1eb2ffb7650b420fd6a'
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
