@@ -2,6 +2,8 @@
 #pragma once
 
 
+#include <nefarius/neflib/Win32Error.hpp>
+
 namespace nefarius::devcon
 {
 	struct FindByHwIdResult
