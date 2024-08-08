@@ -17,4 +17,14 @@
       <UniqueIdentifier>{657b304c-8616-4ed8-8f3c-412b8bae675a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\nefarius\neflib\UniUtil.hpp">
+      <Filter>Header Files\Public</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="UniUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>
