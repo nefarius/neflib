@@ -145,4 +145,11 @@ namespace nefarius::devcon
 	 */
 	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error> FindByHwId(
 		const std::wstring& matchstring);
+
+	namespace bluetooth
+	{
+		std::expected<void, nefarius::utilities::Win32Error> RestartBthUsbDevice(int instance = 0);
+
+		std::expected<void, nefarius::utilities::Win32Error> EnableDisableBthUsbDevice(bool state, int instance = 0);
+	}
 }

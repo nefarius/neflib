@@ -10,6 +10,8 @@
 #include <SetupAPI.h>
 #include <newdev.h>
 #include <tchar.h>
+#include <initguid.h>
+#include <devguid.h>
 
 //
 // Include consumed STL

@@ -615,8 +615,8 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
-		DetourAttach((void**)&real_MessageBoxW, DetourMessageBoxW);  // NOLINT(clang-diagnostic-microsoft-cast)
-		DetourAttach((void**)&real_RestartDialogEx, DetourRestartDialogEx);  // NOLINT(clang-diagnostic-microsoft-cast)
+		DetourAttach((void**)&real_MessageBoxW, DetourMessageBoxW); // NOLINT(clang-diagnostic-microsoft-cast)
+		DetourAttach((void**)&real_RestartDialogEx, DetourRestartDialogEx); // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
 
 		g_MbCalled = FALSE;
@@ -626,8 +626,8 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
-		DetourDetach((void**)&real_MessageBoxW, DetourMessageBoxW);  // NOLINT(clang-diagnostic-microsoft-cast)
-		DetourDetach((void**)&real_RestartDialogEx, DetourRestartDialogEx);  // NOLINT(clang-diagnostic-microsoft-cast)
+		DetourDetach((void**)&real_MessageBoxW, DetourMessageBoxW); // NOLINT(clang-diagnostic-microsoft-cast)
+		DetourDetach((void**)&real_RestartDialogEx, DetourRestartDialogEx); // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
 
 		//
@@ -751,14 +751,14 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std:
 
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
-		DetourAttach((void**)&real_RestartDialogEx, DetourRestartDialogEx);  // NOLINT(clang-diagnostic-microsoft-cast)
+		DetourAttach((void**)&real_RestartDialogEx, DetourRestartDialogEx); // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
 
 		InstallHinfSectionW(nullptr, nullptr, pszDest, 0);
 
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
-		DetourDetach((void**)&real_RestartDialogEx, DetourRestartDialogEx);  // NOLINT(clang-diagnostic-microsoft-cast)
+		DetourDetach((void**)&real_RestartDialogEx, DetourRestartDialogEx); // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
 
 		if (rebootRequired)
@@ -909,4 +909,146 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 	}
 
 	return results;
+}
+
+std::expected<void, Win32Error> nefarius::devcon::bluetooth::RestartBthUsbDevice(int instance)
+{
+	bool found = false;
+	SP_DEVINFO_DATA spDevInfoData;
+
+	guards::HDEVINFOHandleGuard hDevInfo(SetupDiGetClassDevs(
+		&GUID_DEVCLASS_BLUETOOTH,
+		nullptr,
+		nullptr,
+		DIGCF_PRESENT
+	));
+
+	if (hDevInfo.is_invalid())
+	{
+		return std::unexpected(Win32Error(GetLastError(), "SetupDiGetClassDevs"));
+	}
+
+	spDevInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+
+	if (!SetupDiEnumDeviceInfo(hDevInfo.get(), instance, &spDevInfoData))
+	{
+		std::unexpected(Win32Error(GetLastError(), "SetupDiEnumDeviceInfo"));
+	}
+
+	DWORD bufferSize = 0;
+	const auto enumeratorProperty = GetDeviceRegistryProperty(
+		hDevInfo.get(),
+		&spDevInfoData,
+		SPDRP_ENUMERATOR_NAME,
+		NULL,
+		&bufferSize
+	);
+
+	if (!enumeratorProperty)
+	{
+		return std::unexpected(enumeratorProperty.error());
+	}
+
+	const LPTSTR buffer = (LPTSTR)enumeratorProperty.value().get();
+
+	// find device with enumerator name "USB"
+	for (LPTSTR p = buffer; p && *p && (p < &buffer[bufferSize]); p += lstrlen(p) + sizeof(TCHAR))
+	{
+		if (!_tcscmp(TEXT("USB"), p))
+		{
+			found = true;
+			break;
+		}
+	}
+
+	// if device found restart
+	if (found)
+	{
+		if (!SetupDiRestartDevices(hDevInfo.get(), &spDevInfoData))
+		{
+			std::unexpected(Win32Error(GetLastError(), "SetupDiRestartDevices"));
+		}
+
+		return {};
+	}
+
+	return std::unexpected(Win32Error(ERROR_NOT_FOUND));
+}
+
+std::expected<void, Win32Error> nefarius::devcon::bluetooth::EnableDisableBthUsbDevice(bool state, int instance)
+{
+	bool found = false;
+	SP_DEVINFO_DATA spDevInfoData;
+
+	guards::HDEVINFOHandleGuard hDevInfo(SetupDiGetClassDevs(
+		&GUID_DEVCLASS_BLUETOOTH,
+		nullptr,
+		nullptr,
+		DIGCF_PRESENT
+	));
+
+	if (hDevInfo.is_invalid())
+	{
+		return std::unexpected(Win32Error(GetLastError(), "SetupDiGetClassDevs"));
+	}
+
+	if (!SetupDiEnumDeviceInfo(hDevInfo.get(), instance, &spDevInfoData))
+	{
+		return std::unexpected(Win32Error(GetLastError(), "SetupDiEnumDeviceInfo"));
+	}
+
+	DWORD bufferSize = 0;
+	const auto enumeratorProperty = GetDeviceRegistryProperty(
+		hDevInfo.get(),
+		&spDevInfoData,
+		SPDRP_ENUMERATOR_NAME,
+		NULL,
+		&bufferSize
+	);
+
+	if (!enumeratorProperty)
+	{
+		return std::unexpected(enumeratorProperty.error());
+	}
+
+	const LPTSTR buffer = (LPTSTR)enumeratorProperty.value().get();
+
+	// find device with enumerator name "USB"
+	for (LPTSTR p = buffer; p && *p && (p < &buffer[bufferSize]); p += lstrlen(p) + sizeof(TCHAR))
+	{
+		if (!_tcscmp(TEXT("USB"), p))
+		{
+			found = true;
+			break;
+		}
+	}
+
+	// if device found change it's state
+	if (found)
+	{
+		SP_PROPCHANGE_PARAMS params;
+
+		params.ClassInstallHeader.cbSize = sizeof(SP_CLASSINSTALL_HEADER);
+		params.ClassInstallHeader.InstallFunction = DIF_PROPERTYCHANGE;
+		// ReSharper disable once CppAssignedValueIsNeverUsed
+		params.Scope = DICS_FLAG_GLOBAL;
+		// ReSharper disable once CppAssignedValueIsNeverUsed
+		params.StateChange = (state) ? DICS_ENABLE : DICS_DISABLE;
+
+		// setup proper parameters            
+		if (!SetupDiSetClassInstallParams(hDevInfo.get(), &spDevInfoData, &params.ClassInstallHeader, sizeof(params)))
+		{
+			return std::unexpected(Win32Error(GetLastError(), "SetupDiSetClassInstallParams"));
+		}
+
+		// use parameters
+		if (!SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, hDevInfo.get(), &spDevInfoData))
+		{
+			return std::unexpected(Win32Error(GetLastError(), "SetupDiCallClassInstaller"));
+		}
+
+		return {};
+	}
+
+	return std::unexpected(Win32Error(ERROR_NOT_FOUND));
 }
