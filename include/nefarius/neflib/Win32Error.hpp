@@ -68,10 +68,10 @@ namespace nefarius::utilities
 			if (additionalMessage.empty())
 				return message;
 
-			return utilities::ConvertAnsiToWide(std::format(
+			return ConvertAnsiToWide(std::format(
 				"{} failed with error: {} ({})",
 				additionalMessage,
-				utilities::ConvertWideToANSI(message),
+				ConvertWideToANSI(message),
 				errorCode
 			));
 		}
