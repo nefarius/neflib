@@ -2,33 +2,41 @@
 
 #include <nefarius/neflib/MiscWinApi.hpp>
 
+using namespace nefarius::utilities;
 
 namespace
 {
 	using GUIDFromString_t = BOOL(WINAPI*)(_In_ LPCSTR, _Out_ LPGUID);
 }
 
-bool nefarius::winapi::GUIDFromString(const std::string& input, GUID* guid)
+std::expected<GUID, Win32Error> nefarius::winapi::GUIDFromString(const std::string& input)
 {
+	GUID guid = {};
+
 	// try without brackets...
-	if (UuidFromStringA(RPC_CSTR(input.data()), guid) == RPC_S_INVALID_STRING_UUID)
+	if (UuidFromStringA(RPC_CSTR(input.data()), &guid) == RPC_S_INVALID_STRING_UUID)
 	{
 		const HMODULE shell32 = LoadLibraryA("Shell32.dll");
 
 		if (shell32 == nullptr)
-			return false;
+		{
+			return std::unexpected(Win32Error("LoadLibraryA"));
+		}
 
 		const auto pFnGUIDFromString = reinterpret_cast<GUIDFromString_t>(
 			GetProcAddress(shell32, MAKEINTRESOURCEA(703)));
 
 		// ...finally try with brackets
-		return pFnGUIDFromString(input.c_str(), guid);
+		if (!pFnGUIDFromString(input.c_str(), &guid))
+		{
+			return std::unexpected(Win32Error("pFnGUIDFromString"));
+		}
 	}
 
-	return true;
+	return guid;
 }
 
-std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::IsAppRunningAsAdminMode()
+std::expected<bool, Win32Error> nefarius::winapi::IsAppRunningAsAdminMode()
 {
 	PSID adminSID = nullptr;
 

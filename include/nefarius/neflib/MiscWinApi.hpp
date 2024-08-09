@@ -5,7 +5,7 @@
 
 namespace nefarius::winapi
 {
-	bool GUIDFromString(const std::string& input, GUID* guid);
+	std::expected<GUID, nefarius::utilities::Win32Error> GUIDFromString(const std::string& input);
 
 	std::expected<bool, nefarius::utilities::Win32Error> IsAppRunningAsAdminMode();
 
