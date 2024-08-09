@@ -1,3 +1,4 @@
+// ReSharper disable CppRedundantQualifier
 #pragma once
 
 
@@ -17,15 +18,15 @@ namespace nefarius::devcon
 		Lower
 	};
 
-	std::expected<void, utilities::Win32Error> AddDeviceClassFilter(const GUID* classGuid,
+	std::expected<void, nefarius::utilities::Win32Error> AddDeviceClassFilter(const GUID* classGuid,
 	                                                                const std::wstring& filterName,
 	                                                                DeviceClassFilterPosition position);
 
-	std::expected<void, utilities::Win32Error> RemoveDeviceClassFilter(const GUID* classGuid,
+	std::expected<void, nefarius::utilities::Win32Error> RemoveDeviceClassFilter(const GUID* classGuid,
 	                                                                   const std::wstring& filterName,
 	                                                                   DeviceClassFilterPosition position);
 
-	std::expected<bool, utilities::Win32Error> HasDeviceClassFilter(const GUID* classGuid,
+	std::expected<bool, nefarius::utilities::Win32Error> HasDeviceClassFilter(const GUID* classGuid,
 	                                                                const std::wstring& filterName,
 	                                                                DeviceClassFilterPosition position);
 }
