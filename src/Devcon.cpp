@@ -946,19 +946,12 @@ std::expected<void, Win32Error> nefarius::devcon::bluetooth::RestartBthUsbDevice
 	}
 
 	const LPTSTR buffer = (LPTSTR)enumeratorProperty.value().Data.get();
+	const size_t bufferLength = enumeratorProperty.value().Length;
 
-	// find device with enumerator name "USB"
-	for (LPTSTR p = buffer; p && *p && (p < &buffer[enumeratorProperty.value().Length]); p += lstrlen(p) + sizeof(TCHAR))
-	{
-		if (!_tcscmp(TEXT("USB"), p))
-		{
-			found = true;
-			break;
-		}
-	}
+	WideMultiStringArray enumerator(buffer, bufferLength);
 
 	// if device found restart
-	if (found)
+	if (enumerator.contains(L"USB"))
 	{
 		if (!SetupDiRestartDevices(hDevInfo.get(), &spDevInfoData))
 		{
@@ -973,8 +966,7 @@ std::expected<void, Win32Error> nefarius::devcon::bluetooth::RestartBthUsbDevice
 
 std::expected<void, Win32Error> nefarius::devcon::bluetooth::EnableDisableBthUsbDevice(bool state, int instance)
 {
-	bool found = false;
-	SP_DEVINFO_DATA spDevInfoData;
+	SP_DEVINFO_DATA spDevInfoData = {};
 
 	guards::HDEVINFOHandleGuard hDevInfo(SetupDiGetClassDevs(
 		&GUID_DEVCLASS_BLUETOOTH,
@@ -1005,19 +997,12 @@ std::expected<void, Win32Error> nefarius::devcon::bluetooth::EnableDisableBthUsb
 	}
 
 	const LPTSTR buffer = (LPTSTR)enumeratorProperty.value().Data.get();
+	const size_t bufferLength = enumeratorProperty.value().Length;
 
-	// find device with enumerator name "USB"
-	for (LPTSTR p = buffer; p && *p && (p < &buffer[enumeratorProperty.value().Length]); p += lstrlen(p) + sizeof(TCHAR))
-	{
-		if (!_tcscmp(TEXT("USB"), p))
-		{
-			found = true;
-			break;
-		}
-	}
+	WideMultiStringArray enumerator(buffer, bufferLength);
 
 	// if device found change it's state
-	if (found)
+	if (enumerator.contains(L"USB"))
 	{
 		SP_PROPCHANGE_PARAMS params;
 

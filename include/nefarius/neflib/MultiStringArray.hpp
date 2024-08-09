@@ -31,6 +31,12 @@ namespace nefarius::utilities
 			data_.resize(size);
 		}
 
+		// Construct from C buffer
+		explicit MultiStringArray(LPTSTR buffer, size_t bufferLength)
+		{
+			data_.assign(buffer, buffer + bufferLength);
+		}
+
 		// Convert to a vector of strings
 		std::vector<StringType> to_vector() const
 		{
@@ -99,7 +105,7 @@ namespace nefarius::utilities
 		}
 
 		// Looks for occurrence of specified string in the array
-		[[nodiscard]] bool contains(const std::vector<StringType>& match)
+		[[nodiscard]] bool contains(const StringType& match)
 		{
 			const auto vector = to_vector();
 			return std::ranges::find(vector, match) != vector.end();
