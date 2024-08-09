@@ -9,15 +9,23 @@ using namespace nefarius::utilities;
 
 namespace
 {
-	std::expected<wil::unique_hlocal_ptr<uint8_t[]>, Win32Error> GetDeviceRegistryProperty(
+	struct DeviceRegistryPropertyResult
+	{
+		wil::unique_hlocal_ptr<uint8_t[]> Data;
+
+		size_t Length;
+
+		DWORD DataType;
+	};
+
+	std::expected<DeviceRegistryPropertyResult, Win32Error> GetDeviceRegistryProperty(
 		_In_ HDEVINFO DeviceInfoSet,
 		_In_ PSP_DEVINFO_DATA DeviceInfoData,
-		_In_ DWORD Property,
-		_Out_opt_ PDWORD PropertyRegDataType,
-		_Out_opt_ PDWORD BufferSize
+		_In_ DWORD Property
 	)
 	{
 		DWORD sizeRequired = 0;
+		DWORD propertyRegDataType;
 
 		//
 		// Query required size
@@ -25,7 +33,7 @@ namespace
 		(void)SetupDiGetDeviceRegistryProperty(DeviceInfoSet,
 		                                       DeviceInfoData,
 		                                       Property,
-		                                       PropertyRegDataType,
+		                                       &propertyRegDataType,
 		                                       NULL,
 		                                       0,
 		                                       &sizeRequired);
@@ -56,7 +64,7 @@ namespace
 		if (!SetupDiGetDeviceRegistryProperty(DeviceInfoSet,
 		                                      DeviceInfoData,
 		                                      Property,
-		                                      PropertyRegDataType,
+		                                      &propertyRegDataType,
 		                                      buffer.get(),
 		                                      sizeRequired,
 		                                      &sizeRequired))
@@ -66,10 +74,7 @@ namespace
 			return std::unexpected(Win32Error(win32Error, "SetupDiGetDeviceRegistryProperty"));
 		}
 
-		if (BufferSize)
-			*BufferSize = sizeRequired;
-
-		return buffer;
+		return DeviceRegistryPropertyResult{std::move(buffer), sizeRequired, propertyRegDataType};
 	}
 
 	DWORD Win32FromHResult(HRESULT hr)
@@ -507,13 +512,10 @@ std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAn
 
 	for (DWORD i = 0; SetupDiEnumDeviceInfo(hDevInfo.get(), i, &spDevInfoData); i++)
 	{
-		DWORD bufferSize = 0;
 		const auto hwIdBuffer = GetDeviceRegistryProperty(
 			hDevInfo.get(),
 			&spDevInfoData,
-			SPDRP_HARDWAREID,
-			NULL,
-			&bufferSize
+			SPDRP_HARDWAREID
 		);
 
 		if (!hwIdBuffer)
@@ -522,12 +524,12 @@ std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAn
 			continue;
 		}
 
-		LPWSTR buffer = (LPWSTR)hwIdBuffer.value().get();
+		LPWSTR buffer = (LPWSTR)hwIdBuffer.value().Data.get();
 
 		//
 		// find device matching hardware ID
 		// 
-		for (LPWSTR p = buffer; p && *p && (p < &buffer[bufferSize]); p += lstrlenW(p) + sizeof(TCHAR))
+		for (LPWSTR p = buffer; p && *p && (p < &buffer[hwIdBuffer.value().Length]); p += lstrlenW(p) + sizeof(TCHAR))
 		{
 			if (wstristr(p, hardwareId.c_str()))
 			{
@@ -796,13 +798,10 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 
 	for (DWORD devIndex = 0; SetupDiEnumDeviceInfo(hDevInfo.get(), devIndex, &spDevInfoData); devIndex++)
 	{
-		DWORD bufferSize = 0;
 		const auto hwIdProperty = GetDeviceRegistryProperty(
 			hDevInfo.get(),
 			&spDevInfoData,
-			SPDRP_HARDWAREID,
-			NULL,
-			&bufferSize
+			SPDRP_HARDWAREID
 		);
 
 		if (!hwIdProperty)
@@ -810,7 +809,7 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 			continue;
 		}
 
-		LPTSTR hwIdsBuffer = (LPTSTR)hwIdProperty.value().get();
+		LPTSTR hwIdsBuffer = (LPTSTR)hwIdProperty.value().Data.get();
 
 		std::vector<std::wstring> entries;
 		const TCHAR* p = hwIdsBuffer;
@@ -842,9 +841,7 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 			const auto descProperty = GetDeviceRegistryProperty(
 				hDevInfo.get(),
 				&spDevInfoData,
-				SPDRP_DEVICEDESC,
-				NULL,
-				&bufferSize
+				SPDRP_DEVICEDESC
 			);
 
 			LPTSTR nameBuffer = NULL;
@@ -860,9 +857,7 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 				const auto nameProperty = GetDeviceRegistryProperty(
 					hDevInfo.get(),
 					&spDevInfoData,
-					SPDRP_FRIENDLYNAME,
-					NULL,
-					&bufferSize
+					SPDRP_FRIENDLYNAME
 				);
 
 				if (!nameProperty)
@@ -870,11 +865,11 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 					continue;
 				}
 
-				nameBuffer = (LPTSTR)nameProperty.value().get();
+				nameBuffer = (LPTSTR)nameProperty.value().Data.get();
 			}
 			else
 			{
-				nameBuffer = (LPTSTR)descProperty.value().get();
+				nameBuffer = (LPTSTR)descProperty.value().Data.get();
 			}
 
 			result.Name = std::wstring(nameBuffer);
@@ -939,13 +934,10 @@ std::expected<void, Win32Error> nefarius::devcon::bluetooth::RestartBthUsbDevice
 		std::unexpected(Win32Error(GetLastError(), "SetupDiEnumDeviceInfo"));
 	}
 
-	DWORD bufferSize = 0;
 	const auto enumeratorProperty = GetDeviceRegistryProperty(
 		hDevInfo.get(),
 		&spDevInfoData,
-		SPDRP_ENUMERATOR_NAME,
-		NULL,
-		&bufferSize
+		SPDRP_ENUMERATOR_NAME
 	);
 
 	if (!enumeratorProperty)
@@ -953,10 +945,10 @@ std::expected<void, Win32Error> nefarius::devcon::bluetooth::RestartBthUsbDevice
 		return std::unexpected(enumeratorProperty.error());
 	}
 
-	const LPTSTR buffer = (LPTSTR)enumeratorProperty.value().get();
+	const LPTSTR buffer = (LPTSTR)enumeratorProperty.value().Data.get();
 
 	// find device with enumerator name "USB"
-	for (LPTSTR p = buffer; p && *p && (p < &buffer[bufferSize]); p += lstrlen(p) + sizeof(TCHAR))
+	for (LPTSTR p = buffer; p && *p && (p < &buffer[enumeratorProperty.value().Length]); p += lstrlen(p) + sizeof(TCHAR))
 	{
 		if (!_tcscmp(TEXT("USB"), p))
 		{
@@ -1001,13 +993,10 @@ std::expected<void, Win32Error> nefarius::devcon::bluetooth::EnableDisableBthUsb
 		return std::unexpected(Win32Error(GetLastError(), "SetupDiEnumDeviceInfo"));
 	}
 
-	DWORD bufferSize = 0;
 	const auto enumeratorProperty = GetDeviceRegistryProperty(
 		hDevInfo.get(),
 		&spDevInfoData,
-		SPDRP_ENUMERATOR_NAME,
-		NULL,
-		&bufferSize
+		SPDRP_ENUMERATOR_NAME
 	);
 
 	if (!enumeratorProperty)
@@ -1015,10 +1004,10 @@ std::expected<void, Win32Error> nefarius::devcon::bluetooth::EnableDisableBthUsb
 		return std::unexpected(enumeratorProperty.error());
 	}
 
-	const LPTSTR buffer = (LPTSTR)enumeratorProperty.value().get();
+	const LPTSTR buffer = (LPTSTR)enumeratorProperty.value().Data.get();
 
 	// find device with enumerator name "USB"
-	for (LPTSTR p = buffer; p && *p && (p < &buffer[bufferSize]); p += lstrlen(p) + sizeof(TCHAR))
+	for (LPTSTR p = buffer; p && *p && (p < &buffer[enumeratorProperty.value().Length]); p += lstrlen(p) + sizeof(TCHAR))
 	{
 		if (!_tcscmp(TEXT("USB"), p))
 		{
