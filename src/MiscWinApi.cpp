@@ -23,6 +23,8 @@ std::expected<GUID, Win32Error> nefarius::winapi::GUIDFromString(const std::stri
 			return std::unexpected(Win32Error("LoadLibraryA"));
 		}
 
+		SCOPE_GUARD_CAPTURE({ FreeLibrary(shell32); }, shell32);
+
 		const auto pFnGUIDFromString = reinterpret_cast<GUIDFromString_t>(
 			GetProcAddress(shell32, MAKEINTRESOURCEA(703)));
 
