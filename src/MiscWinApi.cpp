@@ -59,7 +59,7 @@ std::expected<bool, Win32Error> nefarius::winapi::IsAppRunningAsAdminMode()
 		0, 0, 0, 0, 0, 0,
 		&adminSID))
 	{
-		return std::unexpected(utilities::Win32Error("AllocateAndInitializeSid"));
+		return std::unexpected(Win32Error("AllocateAndInitializeSid"));
 	}
 
 	BOOL isMember = FALSE;
@@ -68,13 +68,13 @@ std::expected<bool, Win32Error> nefarius::winapi::IsAppRunningAsAdminMode()
 	// the primary access token of the process.
 	if (!CheckTokenMembership(nullptr, adminSID, &isMember))
 	{
-		return std::unexpected(utilities::Win32Error("CheckTokenMembership"));
+		return std::unexpected(Win32Error("CheckTokenMembership"));
 	}
 
 	return isMember != FALSE;
 }
 
-std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::AdjustProcessPrivileges()
+std::expected<void, Win32Error> nefarius::winapi::AdjustProcessPrivileges()
 {
 	HANDLE procToken;
 	LUID luid;
@@ -86,7 +86,7 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::AdjustPro
 		&procToken
 	))
 	{
-		return std::unexpected(utilities::Win32Error("OpenProcessToken"));
+		return std::unexpected(Win32Error("OpenProcessToken"));
 	}
 
 	SCOPE_GUARD_CAPTURE({
@@ -98,7 +98,7 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::AdjustPro
 
 	if (!LookupPrivilegeValue(nullptr, SE_LOAD_DRIVER_NAME, &luid))
 	{
-		return std::unexpected(utilities::Win32Error("LookupPrivilegeValue"));
+		return std::unexpected(Win32Error("LookupPrivilegeValue"));
 	}
 
 	tp.PrivilegeCount = 1;
@@ -123,13 +123,13 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::AdjustPro
 
 	if (GetLastError() != ERROR_SUCCESS)
 	{
-		return std::unexpected(utilities::Win32Error("AdjustTokenPrivileges"));
+		return std::unexpected(Win32Error("AdjustTokenPrivileges"));
 	}
 
 	return {};
 }
 
-std::expected<PSID, nefarius::utilities::Win32Error> nefarius::winapi::GetLogonSID(HANDLE hToken)
+std::expected<PSID, Win32Error> nefarius::winapi::GetLogonSID(HANDLE hToken)
 {
 	DWORD dwLength = 0;
 	PTOKEN_GROUPS ptg = nullptr;
@@ -146,7 +146,7 @@ std::expected<PSID, nefarius::utilities::Win32Error> nefarius::winapi::GetLogonS
 	// Get the token group information from the access token.
 	if (!GetTokenInformation(hToken, TokenGroups, ptg, dwLength, &dwLength))
 	{
-		return std::unexpected(utilities::Win32Error("GetTokenInformation"));
+		return std::unexpected(Win32Error("GetTokenInformation"));
 	}
 
 	// Loop through the groups to find the logon SID.
@@ -164,10 +164,10 @@ std::expected<PSID, nefarius::utilities::Win32Error> nefarius::winapi::GetLogonS
 		}
 	}
 
-	return std::unexpected(utilities::Win32Error(ERROR_NOT_FOUND));
+	return std::unexpected(Win32Error(ERROR_NOT_FOUND));
 }
 
-std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::SetPrivilege(
+std::expected<void, Win32Error> nefarius::winapi::SetPrivilege(
 	LPCWSTR privilege, int enable, HANDLE process)
 {
 	TOKEN_PRIVILEGES tp;
@@ -176,14 +176,14 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::SetPrivil
 
 	if (!OpenProcessToken(process, TOKEN_ADJUST_PRIVILEGES, &token))
 	{
-		return std::unexpected(utilities::Win32Error("OpenProcessToken"));
+		return std::unexpected(Win32Error("OpenProcessToken"));
 	}
 
 	SCOPE_GUARD_CAPTURE({ CloseHandle(token); }, token);
 
 	if (!LookupPrivilegeValue(nullptr, privilege, &luid))
 	{
-		return std::unexpected(utilities::Win32Error("LookupPrivilegeValue"));
+		return std::unexpected(Win32Error("LookupPrivilegeValue"));
 	}
 
 	tp.PrivilegeCount = 1;
@@ -193,13 +193,13 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::SetPrivil
 	// Enable the privilege or disable all privileges.
 	if (!AdjustTokenPrivileges(token, 0, &tp, NULL, nullptr, nullptr))
 	{
-		return std::unexpected(utilities::Win32Error("AdjustTokenPrivileges"));
+		return std::unexpected(Win32Error("AdjustTokenPrivileges"));
 	}
 
 	return {};
 }
 
-std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR file)
+std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR file)
 {
 	HANDLE token;
 	DWORD len;
@@ -208,7 +208,7 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::TakeF
 	// Get the privileges you need
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &token))
 	{
-		return std::unexpected(utilities::Win32Error("OpenProcessToken"));
+		return std::unexpected(Win32Error("OpenProcessToken"));
 	}
 
 	if (auto ret = SetPrivilege(L"SeTakeOwnershipPrivilege", TRUE); !ret)
@@ -231,7 +231,7 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::TakeF
 	// Create the security descriptor
 	if (!GetFileSecurity(file, OWNER_SECURITY_INFORMATION, security, 0, &len))
 	{
-		return std::unexpected(utilities::Win32Error("GetFileSecurity"));
+		return std::unexpected(Win32Error("GetFileSecurity"));
 	}
 
 	security = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, len);
@@ -240,7 +240,7 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::TakeF
 
 	if (!InitializeSecurityDescriptor(security, SECURITY_DESCRIPTOR_REVISION))
 	{
-		return std::unexpected(utilities::Win32Error("InitializeSecurityDescriptor"));
+		return std::unexpected(Win32Error("InitializeSecurityDescriptor"));
 	}
 
 	const auto sid = GetLogonSID(token);
@@ -255,19 +255,19 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::TakeF
 	// Set the sid to be the new owner
 	if (!SetSecurityDescriptorOwner(security, sid.value(), 0))
 	{
-		return std::unexpected(utilities::Win32Error("SetSecurityDescriptorOwner"));
+		return std::unexpected(Win32Error("SetSecurityDescriptorOwner"));
 	}
 
 	// Save the security descriptor
 	if (!SetFileSecurity(file, OWNER_SECURITY_INFORMATION, security))
 	{
-		return std::unexpected(utilities::Win32Error("SetFileSecurity"));
+		return std::unexpected(Win32Error("SetFileSecurity"));
 	}
 
 	return {};
 }
 
-std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services::CreateDriverService(PCSTR ServiceName,
+std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(PCSTR ServiceName,
 	PCSTR DisplayName, PCSTR BinaryPath)
 {
 	SC_HANDLE hSCManager = OpenSCManagerA(
@@ -278,7 +278,7 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services:
 
 	if (!hSCManager)
 	{
-		return std::unexpected(utilities::Win32Error("OpenSCManagerA"));
+		return std::unexpected(Win32Error("OpenSCManagerA"));
 	}
 
 	SCOPE_GUARD_CAPTURE({ CloseServiceHandle(hSCManager); }, hSCManager);
@@ -301,7 +301,7 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services:
 
 	if (!hService)
 	{
-		return std::unexpected(utilities::Win32Error("CreateServiceA"));
+		return std::unexpected(Win32Error("CreateServiceA"));
 	}
 
 	SCOPE_GUARD_CAPTURE({ CloseServiceHandle(hService); }, hService);
@@ -309,7 +309,7 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services:
 	return {};
 }
 
-std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services::DeleteDriverService(PCSTR ServiceName)
+std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(PCSTR ServiceName)
 {
 	SC_HANDLE hSCManager = OpenSCManagerA(
 		nullptr,
@@ -319,7 +319,7 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services:
 
 	if (!hSCManager)
 	{
-		return std::unexpected(utilities::Win32Error("OpenSCManagerA"));
+		return std::unexpected(Win32Error("OpenSCManagerA"));
 	}
 
 	SCOPE_GUARD_CAPTURE({ CloseServiceHandle(hSCManager); }, hSCManager);
@@ -332,14 +332,14 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services:
 
 	if (!hService)
 	{
-		return std::unexpected(utilities::Win32Error("OpenServiceA"));
+		return std::unexpected(Win32Error("OpenServiceA"));
 	}
 
 	SCOPE_GUARD_CAPTURE({ CloseServiceHandle(hService); }, hService);
 
 	if (!DeleteService(hService))
 	{
-		return std::unexpected(utilities::Win32Error("DeleteService"));
+		return std::unexpected(Win32Error("DeleteService"));
 	}
 
 	return {};
