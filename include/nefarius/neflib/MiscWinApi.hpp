@@ -15,6 +15,11 @@ namespace nefarius::winapi
 
 	std::expected<void, nefarius::utilities::Win32Error> SetPrivilege(LPCWSTR privilege, int enable, HANDLE process = GetCurrentProcess());
 
+	namespace fs
+	{
+		std::expected<void, nefarius::utilities::Win32Error> TakeFileOwnership(LPCWSTR file);
+	}
+
 	namespace services
 	{
 		std::expected<void, nefarius::utilities::Win32Error> CreateDriverService(PCSTR ServiceName, PCSTR DisplayName, PCSTR BinaryPath);

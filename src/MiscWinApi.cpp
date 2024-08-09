@@ -189,6 +189,74 @@ std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::SetPrivil
 	return {};
 }
 
+std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR file)
+{
+	HANDLE token;
+	DWORD len;
+	PSECURITY_DESCRIPTOR security = nullptr;
+
+	// Get the privileges you need
+	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &token))
+	{
+		return std::unexpected(utilities::Win32Error("OpenProcessToken"));
+	}
+
+	if (auto ret = SetPrivilege(L"SeTakeOwnershipPrivilege", TRUE); !ret)
+	{
+		return ret;
+	}
+	if (auto ret = SetPrivilege(L"SeSecurityPrivilege", TRUE); !ret)
+	{
+		return ret;
+	}
+	if (auto ret = SetPrivilege(L"SeBackupPrivilege", TRUE); !ret)
+	{
+		return ret;
+	}
+	if (auto ret = SetPrivilege(L"SeRestorePrivilege", TRUE); !ret)
+	{
+		return ret;
+	}
+
+	// Create the security descriptor
+	if (!GetFileSecurity(file, OWNER_SECURITY_INFORMATION, security, 0, &len))
+	{
+		return std::unexpected(utilities::Win32Error("GetFileSecurity"));
+	}
+
+	security = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, len);
+
+	SCOPE_GUARD_CAPTURE({ HeapFree(GetProcessHeap(), 0, security); }, security);
+
+	if (!InitializeSecurityDescriptor(security, SECURITY_DESCRIPTOR_REVISION))
+	{
+		return std::unexpected(utilities::Win32Error("InitializeSecurityDescriptor"));
+	}
+
+	const auto sid = GetLogonSID(token);
+
+	if (!sid)
+	{
+		return std::unexpected(sid.error());
+	}
+
+	SCOPE_GUARD_CAPTURE({ HeapFree(GetProcessHeap(), 0, sid.value()); }, sid);
+
+	// Set the sid to be the new owner
+	if (!SetSecurityDescriptorOwner(security, sid.value(), 0))
+	{
+		return std::unexpected(utilities::Win32Error("SetSecurityDescriptorOwner"));
+	}
+
+	// Save the security descriptor
+	if (!SetFileSecurity(file, OWNER_SECURITY_INFORMATION, security))
+	{
+		return std::unexpected(utilities::Win32Error("SetFileSecurity"));
+	}
+
+	return {};
+}
+
 std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services::CreateDriverService(PCSTR ServiceName,
 	PCSTR DisplayName, PCSTR BinaryPath)
 {
