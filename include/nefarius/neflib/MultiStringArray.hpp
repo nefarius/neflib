@@ -25,6 +25,12 @@ namespace nefarius::utilities
 			from_string(str);
 		}
 
+		// Preallocate by amount of bytes
+		explicit MultiStringArray(size_t size)
+		{
+			data_.resize(size);
+		}
+
 		// Convert to a vector of strings
 		std::vector<StringType> to_vector() const
 		{
@@ -90,6 +96,13 @@ namespace nefarius::utilities
 		[[nodiscard]] size_t chars() const
 		{
 			return data_.size();
+		}
+
+		// Looks for occurrence of specified string in the array
+		[[nodiscard]] bool contains(const std::vector<StringType>& match)
+		{
+			const auto vector = to_vector();
+			return std::ranges::find(vector, match) != vector.end();
 		}
 
 	private:
