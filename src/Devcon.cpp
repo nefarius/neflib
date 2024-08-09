@@ -79,7 +79,7 @@ namespace
 
 	DWORD Win32FromHResult(HRESULT hr)
 	{
-		if ((hr & 0xFFFF0000) == MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, 0))
+		if ((hr & 0xFFFF0000) == MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, 0))  // NOLINT(clang-diagnostic-sign-compare)
 		{
 			return HRESULT_CODE(hr);
 		}
