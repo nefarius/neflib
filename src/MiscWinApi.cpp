@@ -42,12 +42,7 @@ std::expected<bool, Win32Error> nefarius::winapi::IsAppRunningAsAdminMode()
 {
 	PSID adminSID = nullptr;
 
-	SCOPE_GUARD_CAPTURE({
-	                    if (adminSID)
-	                    {
-	                    FreeSid(adminSID);
-	                    }
-	                    }, adminSID);
+	SCOPE_GUARD_CAPTURE({ if (adminSID) FreeSid(adminSID); }, adminSID);
 
 	// Allocate and initialize a SID of the administrators group.
 	SID_IDENTIFIER_AUTHORITY authority = SECURITY_NT_AUTHORITY;
@@ -89,12 +84,7 @@ std::expected<void, Win32Error> nefarius::winapi::AdjustProcessPrivileges()
 		return std::unexpected(Win32Error("OpenProcessToken"));
 	}
 
-	SCOPE_GUARD_CAPTURE({
-	                    if (procToken)
-	                    {
-	                    CloseHandle(procToken);
-	                    }
-	                    }, procToken);
+	SCOPE_GUARD_CAPTURE({ if (procToken) CloseHandle(procToken); }, procToken);
 
 	if (!LookupPrivilegeValue(nullptr, SE_LOAD_DRIVER_NAME, &luid))
 	{
