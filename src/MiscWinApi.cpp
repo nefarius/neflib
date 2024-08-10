@@ -8,6 +8,45 @@ using namespace nefarius::utilities;
 namespace
 {
 	using GUIDFromString_t = BOOL(WINAPI*)(_In_ LPCSTR, _Out_ LPGUID);
+
+	std::expected<const VS_FIXEDFILEINFO*, Win32Error> GetFileVersionResource(const std::string& filePath)
+	{
+		DWORD verHandle = 0;
+		UINT size = 0;
+		LPBYTE lpBuffer = nullptr;
+		const DWORD verSize = GetFileVersionInfoSizeA(filePath.c_str(), &verHandle);
+
+		if (!verSize)
+		{
+			return std::unexpected(Win32Error("GetFileVersionInfoSizeA"));
+		}
+
+		const auto buffer = wil::make_unique_hlocal_nothrow<uint8_t[]>(verSize);
+
+		if (!GetFileVersionInfoA(filePath.c_str(), verHandle, verSize, buffer.get()))
+		{
+			return std::unexpected(Win32Error("GetFileVersionInfoA"));
+		}
+
+		if (!VerQueryValueA(buffer.get(), "\\", (VOID FAR * FAR*)&lpBuffer, &size))
+		{
+			return std::unexpected(Win32Error("VerQueryValueA"));
+		}
+
+		if (size == 0)
+		{
+			return std::unexpected(Win32Error(ERROR_INVALID_USER_BUFFER, "VerQueryValueA"));
+		}
+
+		const VS_FIXEDFILEINFO* verInfo = (VS_FIXEDFILEINFO*)lpBuffer;
+
+		if (verInfo->dwSignature != 0xfeef04bd)
+		{
+			return std::unexpected(Win32Error(ERROR_INVALID_EXE_SIGNATURE, "VS_FIXEDFILEINFO"));
+		}
+
+		return verInfo;
+	}
 }
 
 std::expected<GUID, Win32Error> nefarius::winapi::GUIDFromString(const std::string& input)
@@ -258,49 +297,6 @@ std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR 
 	return {};
 }
 
-namespace
-{
-	std::expected<const VS_FIXEDFILEINFO*, Win32Error> GetFileVersionResource(const std::string& filePath)
-	{
-		DWORD verHandle = 0;
-		UINT size = 0;
-		LPBYTE lpBuffer = nullptr;
-		const DWORD verSize = GetFileVersionInfoSizeA(filePath.c_str(), &verHandle);
-
-		if (!verSize)
-		{
-			return std::unexpected(Win32Error("GetFileVersionInfoSizeA"));
-		}
-
-		const auto buffer = wil::make_unique_hlocal_nothrow<uint8_t[]>(verSize);
-
-		if (!GetFileVersionInfoA(filePath.c_str(), verHandle, verSize, buffer.get()))
-		{
-			return std::unexpected(Win32Error("GetFileVersionInfoA"));
-		}
-
-		if (!VerQueryValueA(buffer.get(), "\\", (VOID FAR * FAR*)&lpBuffer, &size))
-		{
-			return std::unexpected(Win32Error("VerQueryValueA"));
-		}
-
-		if (size == 0)
-		{
-			return std::unexpected(Win32Error(ERROR_INVALID_USER_BUFFER, "VerQueryValueA"));
-		}
-
-		const VS_FIXEDFILEINFO* verInfo = (VS_FIXEDFILEINFO*)lpBuffer;
-
-		if (verInfo->dwSignature != 0xfeef04bd)
-		{
-			return std::unexpected(Win32Error(ERROR_INVALID_EXE_SIGNATURE, "VS_FIXEDFILEINFO"));
-		}
-
-		return verInfo;
-	}
-}
-
-
 std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::GetProductVersionFromFile(
 	const std::string& filePath)
 {
@@ -320,7 +316,6 @@ std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::G
 		LOWORD(version->dwProductVersionLS)
 	};
 }
-
 
 std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::
 GetFileVersionFromFile(const std::string& filePath)
