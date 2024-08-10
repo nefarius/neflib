@@ -6,3 +6,9 @@
 My opinionated collection of C++ utilities.
 
 Work in progress 🔥
+
+## Sources and 3rd party credits
+
+- [Windows Implementation Library](https://github.com/microsoft/wil)
+- [Microsoft Research Detours Package](https://github.com/microsoft/Detours)
+- [A modern C++ scope guard that is easy to use but hard to misuse](https://github.com/ricab/scope_guard)
