@@ -1,0 +1,16 @@
+site_name: neflib API documentation
+
+theme:
+  name: material
+
+plugins:
+  - search
+  - mkdoxy:
+      projects:
+        neflib:
+          src-dirs: /source
+          full-doc: True
+          doxy-cfg:
+            FILE_PATTERNS: "*.cpp *.h*"
+            RECURSIVE: True
+            EXCLUDE_PATTERNS: "*/.vs/*"
