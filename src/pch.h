@@ -21,6 +21,7 @@
 #include <vector>
 #include <format>
 #include <expected>
+#include <sstream>
 
 //
 // Vcpkg dependencies
