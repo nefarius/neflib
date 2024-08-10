@@ -17,7 +17,27 @@ namespace nefarius::winapi
 
 	namespace fs
 	{
+		struct Version
+		{
+			union
+			{
+				struct  // NOLINT(clang-diagnostic-nested-anon-types)
+				{
+					uint16_t Major;
+					uint16_t Minor;
+					uint16_t Build;
+					uint16_t Private;
+				};
+
+				uint64_t Value;
+			};
+		};
+
 		std::expected<void, nefarius::utilities::Win32Error> TakeFileOwnership(LPCWSTR file);
+
+		std::expected<Version, nefarius::utilities::Win32Error> GetProductVersionFromFile(const std::string& filePath);
+
+		std::expected<Version, nefarius::utilities::Win32Error> GetFileVersionFromFile(const std::string& filePath);
 	}
 
 	namespace services
