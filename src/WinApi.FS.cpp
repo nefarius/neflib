@@ -60,19 +60,19 @@ std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR 
 		return std::unexpected(Win32Error("OpenProcessToken"));
 	}
 
-	if (auto ret = SetPrivilege(L"SeTakeOwnershipPrivilege", TRUE); !ret)
+	if (auto ret = security::SetPrivilege(L"SeTakeOwnershipPrivilege", TRUE); !ret)
 	{
 		return ret;
 	}
-	if (auto ret = SetPrivilege(L"SeSecurityPrivilege", TRUE); !ret)
+	if (auto ret = security::SetPrivilege(L"SeSecurityPrivilege", TRUE); !ret)
 	{
 		return ret;
 	}
-	if (auto ret = SetPrivilege(L"SeBackupPrivilege", TRUE); !ret)
+	if (auto ret = security::SetPrivilege(L"SeBackupPrivilege", TRUE); !ret)
 	{
 		return ret;
 	}
-	if (auto ret = SetPrivilege(L"SeRestorePrivilege", TRUE); !ret)
+	if (auto ret = security::SetPrivilege(L"SeRestorePrivilege", TRUE); !ret)
 	{
 		return ret;
 	}
@@ -92,7 +92,7 @@ std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR 
 		return std::unexpected(Win32Error("InitializeSecurityDescriptor"));
 	}
 
-	const auto sid = GetLogonSID(token);
+	const auto sid = security::GetLogonSID(token);
 
 	if (!sid)
 	{

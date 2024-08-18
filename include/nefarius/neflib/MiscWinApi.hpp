@@ -7,13 +7,17 @@ namespace nefarius::winapi
 {
 	std::expected<GUID, nefarius::utilities::Win32Error> GUIDFromString(const std::string& input);
 
-	std::expected<bool, nefarius::utilities::Win32Error> IsAppRunningAsAdminMode();
+	namespace security
+	{
+		std::expected<bool, nefarius::utilities::Win32Error> IsAppRunningAsAdminMode();
 
-	std::expected<void, nefarius::utilities::Win32Error> AdjustProcessPrivileges();
+		std::expected<void, nefarius::utilities::Win32Error> AdjustProcessPrivileges();
 
-	std::expected<PSID, nefarius::utilities::Win32Error> GetLogonSID(HANDLE hToken);
+		std::expected<PSID, nefarius::utilities::Win32Error> GetLogonSID(HANDLE hToken);
 
-	std::expected<void, nefarius::utilities::Win32Error> SetPrivilege(LPCWSTR privilege, int enable, HANDLE process = GetCurrentProcess());
+		std::expected<void, nefarius::utilities::Win32Error> SetPrivilege(
+			LPCWSTR privilege, int enable, HANDLE process = GetCurrentProcess());
+	}
 
 	namespace fs
 	{
@@ -21,7 +25,7 @@ namespace nefarius::winapi
 		{
 			union
 			{
-				struct  // NOLINT(clang-diagnostic-nested-anon-types)
+				struct // NOLINT(clang-diagnostic-nested-anon-types)
 				{
 					uint16_t Major;
 					uint16_t Minor;
@@ -34,11 +38,11 @@ namespace nefarius::winapi
 		};
 
 		inline std::string to_string(Version const& version)
-	    {
-	        std::ostringstream ss;
-	        ss << version.Major << "." << version.Minor << "." << version.Build << "." << version.Private;
-	        return std::move(ss).str();
-	    }
+		{
+			std::ostringstream ss;
+			ss << version.Major << "." << version.Minor << "." << version.Build << "." << version.Private;
+			return std::move(ss).str();
+		}
 
 		std::expected<void, nefarius::utilities::Win32Error> TakeFileOwnership(LPCWSTR file);
 
@@ -49,7 +53,8 @@ namespace nefarius::winapi
 
 	namespace services
 	{
-		std::expected<void, nefarius::utilities::Win32Error> CreateDriverService(PCSTR ServiceName, PCSTR DisplayName, PCSTR BinaryPath);
+		std::expected<void, nefarius::utilities::Win32Error> CreateDriverService(
+			PCSTR ServiceName, PCSTR DisplayName, PCSTR BinaryPath);
 
 		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverService(PCSTR ServiceName);
 	}

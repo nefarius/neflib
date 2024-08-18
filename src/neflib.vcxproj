@@ -201,6 +201,7 @@
     <ClCompile Include="UniUtil.cpp" />
     <ClCompile Include="WinApi.CLI.cpp" />
     <ClCompile Include="WinApi.FS.cpp" />
+    <ClCompile Include="WinApi.Security.cpp" />
     <ClCompile Include="WinApi.Services.cpp" />
   </ItemGroup>
   <ItemGroup>
