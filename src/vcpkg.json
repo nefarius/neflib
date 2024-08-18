@@ -9,14 +9,8 @@
       "name": "vcpkg-msbuild",
       "host": true
     },
-    {
-      "name": "detours",
-      "host": true
-    },
-    {
-      "name": "scope-guard",
-      "host": true
-    },
+    "detours",
+    "scope-guard",
     "wil"
   ],
   "features": {},
