@@ -58,11 +58,11 @@ namespace nefarius::winapi
 	{
 		struct CliArgsResult
 		{
-			std::vector<const char*> Argv;
+			std::vector<std::string> Arguments;
 
-			int Argc;
+			std::vector<const char*> AsArgv(int* argc);
 		};
 
-		std::expected<nefarius::winapi::cli::CliArgsResult, nefarius::utilities::Win32Error> GetCommandLineAsArgcArgv();
+		std::expected<nefarius::winapi::cli::CliArgsResult, nefarius::utilities::Win32Error> GetCommandLineArgs();
 	}
 }

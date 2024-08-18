@@ -229,7 +229,24 @@ std::expected<void, Win32Error> nefarius::winapi::SetPrivilege(
 	return {};
 }
 
-std::expected<nefarius::winapi::cli::CliArgsResult, Win32Error> nefarius::winapi::cli::GetCommandLineAsArgcArgv()
+std::vector<const char*> nefarius::winapi::cli::CliArgsResult::AsArgv(int* argc)
+{
+	const auto numArgs = this->Arguments.size();
+
+	std::vector<const char*> argv;
+	argv.resize(numArgs);
+
+	std::ranges::transform(this->Arguments, argv.begin(), [](const std::string& arg) { return arg.c_str(); });
+
+	argv.push_back(nullptr);
+
+	if (argc)
+		*argc = (int)numArgs;
+
+	return argv;
+}
+
+std::expected<nefarius::winapi::cli::CliArgsResult, Win32Error> nefarius::winapi::cli::GetCommandLineArgs()
 {
 	int nArgs;
 
@@ -239,7 +256,6 @@ std::expected<nefarius::winapi::cli::CliArgsResult, Win32Error> nefarius::winapi
 		return std::unexpected(Win32Error("CommandLineToArgvW"));
 	}
 
-	std::vector<const char*> argv;
 	std::vector<std::string> narrow;
 
 	for (int i = 0; i < nArgs; i++)
@@ -247,12 +263,7 @@ std::expected<nefarius::winapi::cli::CliArgsResult, Win32Error> nefarius::winapi
 		narrow.push_back(ConvertWideToANSI(std::wstring(szArglist[i])));
 	}
 
-	argv.resize(nArgs);
-	std::ranges::transform(narrow, argv.begin(), [](const std::string& arg) { return arg.c_str(); });
-
-	argv.push_back(nullptr);
-
-	return CliArgsResult{argv, nArgs};
+	return CliArgsResult{std::move(narrow)};
 }
 
 std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR file)
