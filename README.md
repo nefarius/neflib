@@ -83,7 +83,6 @@ My philosophy is having my code stay out of your project structures' and prefere
 #include <vector>
 #include <format>
 #include <expected>
-#include <sstream>
 #include <algorithm>
 
 //

@@ -39,9 +39,7 @@ namespace nefarius::winapi
 
 		inline std::string to_string(Version const& version)
 		{
-			std::ostringstream ss;
-			ss << version.Major << "." << version.Minor << "." << version.Build << "." << version.Private;
-			return std::move(ss).str();
+			return std::move(std::format("{}.{}.{}.{}", version.Major, version.Minor, version.Build, version.Private));
 		}
 
 		std::expected<void, nefarius::utilities::Win32Error> TakeFileOwnership(LPCWSTR file);
