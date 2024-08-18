@@ -115,9 +115,9 @@ std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::Ge
 		return std::unexpected(Win32Error("OpenServiceA"));
 	}
 
-	SERVICE_STATUS_PROCESS stat;
+	SERVICE_STATUS_PROCESS stat{};
 	DWORD needed = 0;
-	BOOL ret = QueryServiceStatusEx(
+	const BOOL ret = QueryServiceStatusEx(
 		svc,
 		SC_STATUS_PROCESS_INFO,
 		(BYTE*)&stat,
