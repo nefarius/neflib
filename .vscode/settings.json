@@ -1,7 +1,16 @@
 {
     "cSpell.words": [
+        "Devcon",
+        "devguid",
+        "HDEVINFO",
+        "HKEY",
+        "initguid",
         "msbuild",
         "neflib",
+        "newdev",
+        "NOMINMAX",
+        "sstream",
+        "tchar",
         "vcpkg"
     ]
 }
