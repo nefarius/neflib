@@ -16,6 +16,9 @@
     <Filter Include="Header Files\Public">
       <UniqueIdentifier>{657b304c-8616-4ed8-8f3c-412b8bae675a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\WinApi">
+      <UniqueIdentifier>{62f5c0eb-e829-4f21-b3ea-8a5a07502927}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\nefarius\neflib\UniUtil.hpp">
@@ -72,7 +75,10 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MiscWinApi.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\WinApi</Filter>
+    </ClCompile>
+    <ClCompile Include="WinApi.FS.cpp">
+      <Filter>Source Files\WinApi</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
