@@ -80,6 +80,12 @@
     <ClCompile Include="WinApi.FS.cpp">
       <Filter>Source Files\WinApi</Filter>
     </ClCompile>
+    <ClCompile Include="WinApi.Services.cpp">
+      <Filter>Source Files\WinApi</Filter>
+    </ClCompile>
+    <ClCompile Include="WinApi.CLI.cpp">
+      <Filter>Source Files\WinApi</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="vcpkg.json" />
