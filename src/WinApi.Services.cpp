@@ -82,3 +82,52 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 
 	return {};
 }
+
+std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::GetServiceStatus(PCSTR ServiceName)
+{
+	SC_HANDLE sch = nullptr;
+	SC_HANDLE svc = nullptr;
+
+	SCOPE_GUARD_CAPTURE({
+	                    if (svc)
+	                    CloseServiceHandle(svc);
+	                    if (sch)
+	                    CloseServiceHandle(sch);
+	                    }, svc, sch);
+
+	sch = OpenSCManagerA(
+		nullptr,
+		nullptr,
+		SC_MANAGER_ALL_ACCESS
+	);
+	if (sch == nullptr)
+	{
+		return std::unexpected(Win32Error("OpenSCManagerA"));
+	}
+
+	svc = OpenServiceA(
+		sch,
+		ServiceName,
+		SC_MANAGER_ALL_ACCESS
+	);
+	if (svc == nullptr)
+	{
+		return std::unexpected(Win32Error("OpenServiceA"));
+	}
+
+	SERVICE_STATUS_PROCESS stat;
+	DWORD needed = 0;
+	BOOL ret = QueryServiceStatusEx(
+		svc,
+		SC_STATUS_PROCESS_INFO,
+		(BYTE*)&stat,
+		sizeof stat,
+		&needed
+	);
+	if (ret == FALSE)
+	{
+		return std::unexpected(Win32Error("QueryServiceStatusEx"));
+	}
+
+	return stat;
+}

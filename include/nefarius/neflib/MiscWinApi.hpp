@@ -57,6 +57,8 @@ namespace nefarius::winapi
 			PCSTR ServiceName, PCSTR DisplayName, PCSTR BinaryPath);
 
 		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverService(PCSTR ServiceName);
+
+		std::expected<SERVICE_STATUS_PROCESS, nefarius::utilities::Win32Error> GetServiceStatus(PCSTR ServiceName);
 	}
 
 	namespace cli
