@@ -252,7 +252,7 @@ std::expected<nefarius::winapi::cli::CliArgsResult, Win32Error> nefarius::winapi
 
 	argv.push_back(nullptr);
 
-	return CliArgsResult{std::move(argv), nArgs};
+	return CliArgsResult{argv, nArgs};
 }
 
 std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR file)
