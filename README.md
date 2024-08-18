@@ -73,6 +73,7 @@ My philosophy is having my code stay out of your project structures' and prefere
 #include <tchar.h>
 #include <initguid.h>
 #include <devguid.h>
+#include <shellapi.h>
 
 //
 // Include consumed STL
@@ -83,6 +84,7 @@ My philosophy is having my code stay out of your project structures' and prefere
 #include <format>
 #include <expected>
 #include <sstream>
+#include <algorithm>
 
 //
 // Vcpkg dependencies

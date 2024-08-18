@@ -12,6 +12,7 @@
 #include <tchar.h>
 #include <initguid.h>
 #include <devguid.h>
+#include <shellapi.h>
 
 //
 // Include consumed STL
@@ -22,6 +23,7 @@
 #include <format>
 #include <expected>
 #include <sstream>
+#include <algorithm>
 
 //
 // Vcpkg dependencies

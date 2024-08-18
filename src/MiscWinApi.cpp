@@ -229,6 +229,32 @@ std::expected<void, Win32Error> nefarius::winapi::SetPrivilege(
 	return {};
 }
 
+std::expected<nefarius::winapi::cli::CliArgsResult, Win32Error> nefarius::winapi::cli::GetCommandLineAsArgcArgv()
+{
+	int nArgs;
+
+	const LPWSTR* szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
+	if (nullptr == szArglist)
+	{
+		return std::unexpected(Win32Error("CommandLineToArgvW"));
+	}
+
+	std::vector<const char*> argv;
+	std::vector<std::string> narrow;
+
+	for (int i = 0; i < nArgs; i++)
+	{
+		narrow.push_back(ConvertWideToANSI(std::wstring(szArglist[i])));
+	}
+
+	argv.resize(nArgs);
+	std::ranges::transform(narrow, argv.begin(), [](const std::string& arg) { return arg.c_str(); });
+
+	argv.push_back(nullptr);
+
+	return CliArgsResult{std::move(argv), nArgs};
+}
+
 std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR file)
 {
 	HANDLE token;

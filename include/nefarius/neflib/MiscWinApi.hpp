@@ -53,4 +53,16 @@ namespace nefarius::winapi
 
 		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverService(PCSTR ServiceName);
 	}
+
+	namespace cli
+	{
+		struct CliArgsResult
+		{
+			std::vector<const char*> Argv;
+
+			int Argc;
+		};
+
+		std::expected<nefarius::winapi::cli::CliArgsResult, nefarius::utilities::Win32Error> GetCommandLineAsArgcArgv();
+	}
 }
