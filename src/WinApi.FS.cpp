@@ -8,12 +8,15 @@ using namespace nefarius::utilities;
 
 namespace
 {
-	std::expected<const VS_FIXEDFILEINFO*, Win32Error> GetFileVersionResource(const std::string& filePath)
+	template <typename StringType>
+	std::expected<const VS_FIXEDFILEINFO*, Win32Error> GetFileVersionResource(const StringType& FilePath)
 	{
+		const std::wstring filePath = ConvertToWide(FilePath);
+
 		DWORD verHandle = 0;
 		UINT size = 0;
 		LPBYTE lpBuffer = nullptr;
-		const DWORD verSize = GetFileVersionInfoSizeA(filePath.c_str(), &verHandle);
+		const DWORD verSize = GetFileVersionInfoSizeW(filePath.c_str(), &verHandle);
 
 		if (!verSize)
 		{
@@ -22,19 +25,19 @@ namespace
 
 		const auto buffer = wil::make_unique_hlocal_nothrow<uint8_t[]>(verSize);
 
-		if (!GetFileVersionInfoA(filePath.c_str(), verHandle, verSize, buffer.get()))
+		if (!GetFileVersionInfoW(filePath.c_str(), verHandle, verSize, buffer.get()))
 		{
 			return std::unexpected(Win32Error("GetFileVersionInfoA"));
 		}
 
-		if (!VerQueryValueA(buffer.get(), "\\", (VOID FAR * FAR*)&lpBuffer, &size))
+		if (!VerQueryValueW(buffer.get(), L"\\", (VOID FAR * FAR*)&lpBuffer, &size))
 		{
-			return std::unexpected(Win32Error("VerQueryValueA"));
+			return std::unexpected(Win32Error("VerQueryValueW"));
 		}
 
 		if (size == 0)
 		{
-			return std::unexpected(Win32Error(ERROR_INVALID_USER_BUFFER, "VerQueryValueA"));
+			return std::unexpected(Win32Error(ERROR_INVALID_USER_BUFFER, "VerQueryValueW"));
 		}
 
 		const VS_FIXEDFILEINFO* verInfo = (VS_FIXEDFILEINFO*)lpBuffer;
@@ -48,8 +51,17 @@ namespace
 	}
 }
 
-std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR file)
+template
+std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const std::wstring& FilePath);
+
+template
+std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const std::string& FilePath);
+
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const StringType& FilePath)
 {
+	const std::wstring filePath = ConvertToWide(FilePath);
+
 	HANDLE token;
 	DWORD len;
 	PSECURITY_DESCRIPTOR security = nullptr;
@@ -78,9 +90,9 @@ std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR 
 	}
 
 	// Create the security descriptor
-	if (!GetFileSecurity(file, OWNER_SECURITY_INFORMATION, security, 0, &len))
+	if (!GetFileSecurityW(filePath.c_str(), OWNER_SECURITY_INFORMATION, security, 0, &len))
 	{
-		return std::unexpected(Win32Error("GetFileSecurity"));
+		return std::unexpected(Win32Error("GetFileSecurityW"));
 	}
 
 	security = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, len);
@@ -108,18 +120,27 @@ std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(LPCWSTR 
 	}
 
 	// Save the security descriptor
-	if (!SetFileSecurity(file, OWNER_SECURITY_INFORMATION, security))
+	if (!SetFileSecurityW(filePath.c_str(), OWNER_SECURITY_INFORMATION, security))
 	{
-		return std::unexpected(Win32Error("SetFileSecurity"));
+		return std::unexpected(Win32Error("SetFileSecurityW"));
 	}
 
 	return {};
 }
 
+template
 std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::GetProductVersionFromFile(
-	const std::string& filePath)
+	const std::wstring& filePath);
+
+template
+std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::GetProductVersionFromFile(
+	const std::string& filePath);
+
+template <typename StringType>
+std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::GetProductVersionFromFile(
+	const StringType& FilePath)
 {
-	const auto ret = ::GetFileVersionResource(filePath);
+	const auto ret = ::GetFileVersionResource(FilePath);
 
 	if (!ret)
 	{
@@ -136,10 +157,19 @@ std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::G
 	};
 }
 
+template
 std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::
-GetFileVersionFromFile(const std::string& filePath)
+GetFileVersionFromFile(const std::wstring& FilePath);
+
+template
+std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::
+GetFileVersionFromFile(const std::string& FilePath);
+
+template <typename StringType>
+std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::
+GetFileVersionFromFile(const StringType& FilePath)
 {
-	const auto ret = ::GetFileVersionResource(filePath);
+	const auto ret = ::GetFileVersionResource(FilePath);
 
 	if (!ret)
 	{

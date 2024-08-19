@@ -42,11 +42,14 @@ namespace nefarius::winapi
 			return std::format("{}.{}.{}.{}", version.Major, version.Minor, version.Build, version.Private);
 		}
 
-		std::expected<void, nefarius::utilities::Win32Error> TakeFileOwnership(LPCWSTR file);
+		template <typename StringType>
+		std::expected<void, nefarius::utilities::Win32Error> TakeFileOwnership(const StringType& FilePath);
 
-		std::expected<Version, nefarius::utilities::Win32Error> GetProductVersionFromFile(const std::string& filePath);
+		template <typename StringType>
+		std::expected<Version, nefarius::utilities::Win32Error> GetProductVersionFromFile(const StringType& FilePath);
 
-		std::expected<Version, nefarius::utilities::Win32Error> GetFileVersionFromFile(const std::string& filePath);
+		template <typename StringType>
+		std::expected<Version, nefarius::utilities::Win32Error> GetFileVersionFromFile(const StringType& FilePath);
 	}
 
 	namespace services
