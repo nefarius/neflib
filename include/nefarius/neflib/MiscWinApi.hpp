@@ -42,6 +42,11 @@ namespace nefarius::winapi
 			return std::format("{}.{}.{}.{}", version.Major, version.Minor, version.Build, version.Private);
 		}
 
+		inline std::wstring to_wstring(Version const& version)
+		{
+			return nefarius::utilities::ConvertAnsiToWide(to_string(version));
+		}
+
 		template <typename StringType>
 		std::expected<void, nefarius::utilities::Win32Error> TakeFileOwnership(const StringType& FilePath);
 
