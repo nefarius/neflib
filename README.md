@@ -5,7 +5,7 @@
 
 My opinionated collection of C++ utilities.
 
-Work in progress 🔥
+Work in progress 🔥 Consider this as "stable to use" but "no stable API" since I am still experimenting and changing things frequently. The version "1.0.0" of the package will be frequently available under new commit hashes until it stabilizes. You have been warned, have fun exploring!
 
 ## How to use
 
@@ -21,7 +21,7 @@ To grab and built it automatically via package manager first create a `vcpkg-con
     {
       "kind": "git",
       "repository": "https://github.com/nefarius/nefarius-vcpkg-registry.git",
-      "baseline": "e86303f5790f4867f9be729e001477f932853871",
+      "baseline": "f76f9c11cb39cf0f2ffbeb5bb11a655f28dc5ffc",
       "packages": [ "neflib" ]
     }
   ],
