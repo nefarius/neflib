@@ -608,9 +608,20 @@ std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAn
 	return results;
 }
 
+template
 std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
-	const std::wstring& fullInfPath, bool* rebootRequired)
+	const std::wstring& FullInfPath, bool* RebootRequired);
+
+template
+std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
+	const std::string& FullInfPath, bool* RebootRequired);
+
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
+	const StringType& FullInfPath, bool* RebootRequired)
 {
+	const std::wstring fullInfPath = ConvertToWide(FullInfPath);
+
 	SYSTEM_INFO sysInfo;
 	WCHAR InfSectionWithExt[LINE_LEN] = {};
 	constexpr int maxCmdLine = 280;
@@ -737,9 +748,9 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 	case FunctionCallResult::Failure:
 		return std::unexpected(Win32Error());
 	case FunctionCallResult::Success:
-		if (rebootRequired)
+		if (RebootRequired)
 		{
-			*rebootRequired = reboot > FALSE || g_RestartDialogExCalled;
+			*RebootRequired = reboot > FALSE || g_RestartDialogExCalled;
 		}
 
 		return {};
@@ -748,9 +759,20 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
 
-std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std::wstring& fullInfPath,
-                                                                      bool* rebootRequired)
+template
+std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std::wstring& FullInfPath,
+                                                                      bool* RebootRequired);
+
+template
+std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std::string& FullInfPath,
+                                                                      bool* RebootRequired);
+
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const StringType& FullInfPath,
+                                                                      bool* RebootRequired)
 {
+	const std::wstring fullInfPath = ConvertToWide(FullInfPath);
+
 	SYSTEM_INFO sysInfo;
 	WCHAR InfSectionWithExt[LINE_LEN] = {};
 	constexpr int maxCmdLine = 280;
@@ -823,9 +845,9 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std:
 		DetourDetach((void**)&real_RestartDialogEx, DetourRestartDialogEx); // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
 
-		if (rebootRequired)
+		if (RebootRequired)
 		{
-			*rebootRequired = g_RestartDialogExCalled;
+			*RebootRequired = g_RestartDialogExCalled;
 		}
 
 		return {};
@@ -834,9 +856,20 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std:
 	return std::unexpected(Win32Error(ERROR_SECTION_NOT_FOUND));
 }
 
+template
 std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefarius::devcon::FindByHwId(
-	const std::wstring& matchstring)
+	const std::wstring& Matchstring);
+
+template
+std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefarius::devcon::FindByHwId(
+	const std::string& Matchstring);
+
+template <typename StringType>
+std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefarius::devcon::FindByHwId(
+	const StringType& Matchstring)
 {
+	const std::wstring matchstring = ConvertToWide(Matchstring);
+
 	DWORD total = 0;
 	SP_DEVINFO_DATA spDevInfoData;
 

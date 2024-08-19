@@ -115,13 +115,14 @@ namespace nefarius::devcon
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
 	 * @date	09.08.2024
 	 *
-	 * @param 		  	fullInfPath   	Full pathname of the INF file.
-	 * @param [in,out]	rebootRequired	If non-null, true if reboot required.
+	 * @param 		  	FullInfPath   	Full pathname of the INF file.
+	 * @param [in,out]	RebootRequired	If non-null, true if reboot required.
 	 *
 	 * @returns	A std::expected&lt;void,nefarius::utilities::Win32Error&gt;
 	 */
-	std::expected<void, nefarius::utilities::Win32Error> InfDefaultInstall(const std::wstring& fullInfPath,
-	                                                                       bool* rebootRequired);
+	template <typename StringType>
+	std::expected<void, nefarius::utilities::Win32Error> InfDefaultInstall(const StringType& FullInfPath,
+	                                                                       bool* RebootRequired);
 
 	/**
 	 * Uninstalls a primitive driver.
@@ -129,13 +130,14 @@ namespace nefarius::devcon
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
 	 * @date	09.08.2024
 	 *
-	 * @param 		  	fullInfPath   	Full pathname of the INF file.
-	 * @param [in,out]	rebootRequired	If non-null, true if reboot required.
+	 * @param 		  	FullInfPath   	Full pathname of the INF file.
+	 * @param [in,out]	RebootRequired	If non-null, true if reboot required.
 	 *
 	 * @returns	A std::expected&lt;void,nefarius::utilities::Win32Error&gt;
 	 */
+	template <typename StringType>
 	std::expected<void, nefarius::utilities::Win32Error> InfDefaultUninstall(
-		const std::wstring& fullInfPath, bool* rebootRequired);
+		const StringType& FullInfPath, bool* RebootRequired);
 
 	/**
 	 * Searches for devices matched by Hardware ID and returns a list of Hardware IDs, friendly
@@ -144,12 +146,13 @@ namespace nefarius::devcon
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
 	 * @date	09.08.2024
 	 *
-	 * @param 	matchstring	The partial string to search for.
+	 * @param 	Matchstring	The partial string to search for.
 	 *
 	 * @returns	True if at least one match was found, false otherwise.
 	 */
+	template <typename StringType>
 	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error> FindByHwId(
-		const std::wstring& matchstring);
+		const StringType& Matchstring);
 
 	namespace bluetooth
 	{
