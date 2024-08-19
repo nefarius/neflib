@@ -61,7 +61,7 @@ SYSTEM_INFO nefarius::winapi::SafeGetNativeSystemInfo()
 std::expected<DWORD, Win32Error> nefarius::winapi::GetParentProcessID(DWORD ProcessId)
 {
 	PROCESSENTRY32W pe32{sizeof(PROCESSENTRY32W)};
-	DWORD dwParentPID = 0;
+	DWORD dwParentPID = 0; // 0 is an invalid PID
 
 	const HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (hSnapshot == INVALID_HANDLE_VALUE)
