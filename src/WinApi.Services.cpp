@@ -98,7 +98,7 @@ std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::Ge
 	sch = OpenSCManagerA(
 		nullptr,
 		nullptr,
-		SC_MANAGER_ALL_ACCESS
+		STANDARD_RIGHTS_REQUIRED | SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE
 	);
 	if (sch == nullptr)
 	{
@@ -108,7 +108,7 @@ std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::Ge
 	svc = OpenServiceA(
 		sch,
 		ServiceName,
-		SC_MANAGER_ALL_ACCESS
+		SERVICE_QUERY_STATUS
 	);
 	if (svc == nullptr)
 	{
