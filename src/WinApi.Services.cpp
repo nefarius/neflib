@@ -104,7 +104,7 @@ template <typename StringType>
 std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::GetServiceStatus(
 	const StringType& ServiceName)
 {
-	const auto serviceName = ConvertToNarrow(ServiceName);
+	const auto serviceName = ConvertToWide(ServiceName);
 
 	SC_HANDLE sch = nullptr;
 	SC_HANDLE svc = nullptr;
@@ -116,24 +116,24 @@ std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::Ge
 	                    CloseServiceHandle(sch);
 	                    }, svc, sch);
 
-	sch = OpenSCManagerA(
+	sch = OpenSCManagerW(
 		nullptr,
 		nullptr,
 		SC_MANAGER_CONNECT
 	);
 	if (sch == nullptr)
 	{
-		return std::unexpected(Win32Error("OpenSCManagerA"));
+		return std::unexpected(Win32Error("OpenSCManagerW"));
 	}
 
-	svc = OpenServiceA(
+	svc = OpenServiceW(
 		sch,
 		serviceName.c_str(),
 		SERVICE_QUERY_STATUS
 	);
 	if (svc == nullptr)
 	{
-		return std::unexpected(Win32Error("OpenServiceA"));
+		return std::unexpected(Win32Error("OpenServiceW"));
 	}
 
 	SERVICE_STATUS_PROCESS stat{};
