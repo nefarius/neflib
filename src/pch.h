@@ -24,6 +24,7 @@
 #include <format>
 #include <expected>
 #include <algorithm>
+#include <variant>
 
 //
 // Vcpkg dependencies

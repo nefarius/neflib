@@ -85,6 +85,7 @@ My philosophy is having my code stay out of your project structures' and prefere
 #include <format>
 #include <expected>
 #include <algorithm>
+#include <variant>
 
 //
 // Vcpkg dependencies

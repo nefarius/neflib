@@ -44,11 +44,11 @@ SYSTEM_INFO nefarius::winapi::SafeGetNativeSystemInfo()
 	SYSTEM_INFO systemInfo{};
 
 	using GetNativeSystemInfoProc = void(WINAPI*)(LPSYSTEM_INFO lpSystemInfo);
-    const auto pFun = (GetNativeSystemInfoProc)GetProcAddress(GetModuleHandleW(L"kernel32"), "GetNativeSystemInfo");
+	const auto pFun = (GetNativeSystemInfoProc)GetProcAddress(GetModuleHandleW(L"kernel32"), "GetNativeSystemInfo");
 
 	if (pFun)
 	{
-		pFun(&systemInfo);		
+		pFun(&systemInfo);
 	}
 	else
 	{
@@ -94,4 +94,42 @@ std::expected<DWORD, Win32Error> nefarius::winapi::GetParentProcessID(DWORD Proc
 	}
 
 	return dwParentPID;
+}
+
+template <typename StringType, typename>
+std::expected<std::variant<std::string, std::wstring>, Win32Error> GetProcessFullPath(DWORD PID)
+{
+	const HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, PID);
+	if (hProcess == nullptr)
+	{
+		return std::unexpected(Win32Error("OpenProcess"));
+	}
+
+	SCOPE_GUARD_CAPTURE({ CloseHandle(hProcess); }, hProcess);
+
+	DWORD numChars = MAX_PATH;
+	StringType processPath(numChars, '\0');
+
+	if constexpr (std::is_same_v<StringType, std::wstring>)
+	{
+		if (!QueryFullProcessImageNameW(hProcess, 0, processPath.data(), &numChars))
+		{
+			return std::unexpected(Win32Error("QueryFullProcessImageNameW"));
+		}
+	}
+	else if constexpr (std::is_same_v<StringType, std::string>)
+	{
+		if (!QueryFullProcessImageNameA(hProcess, 0, processPath.data(), &numChars))
+		{
+			return std::unexpected(Win32Error("QueryFullProcessImageNameA"));
+		}
+	}
+	else
+	{
+		return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR, "Not a string type"));
+	}
+
+	StripNullCharacters(processPath);
+
+	return processPath;
 }
