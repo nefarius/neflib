@@ -21,8 +21,11 @@ namespace nefarius::winapi
 		{
 			return nefarius::utilities::ConvertToNarrow(GetProcessFullPathImpl(PID));
 		}
+		else
+		{
+			static_assert(false, "Not a string type");
+		}
 
-		static_assert(false, "Not a string type");
 		return std::unexpected(nefarius::utilities::Win32Error(ERROR_INTERNAL_ERROR));
 	}
 }
