@@ -9,7 +9,7 @@ namespace nefarius::utilities
 {
 	std::expected<std::wstring, nefarius::utilities::Win32Error> GetProcessFullPathImpl(DWORD PID);
 
-	template <nefarius::utilities::string_type StringType>
+	template <typename StringType>
 	std::expected<std::variant<std::string, std::wstring>, nefarius::utilities::Win32Error>
 	GetProcessFullPath(DWORD PID)
 	{
