@@ -13,10 +13,6 @@ namespace nefarius::winapi
 
 	std::expected<DWORD, nefarius::utilities::Win32Error> GetParentProcessID(DWORD ProcessId);
 
-	template <nefarius::utilities::string_type StringType>
-	std::expected<std::variant<std::string, std::wstring>, nefarius::utilities::Win32Error>
-	GetProcessFullPath(DWORD PID);
-
 	namespace security
 	{
 		std::expected<bool, nefarius::utilities::Win32Error> IsAppRunningAsAdminMode();
