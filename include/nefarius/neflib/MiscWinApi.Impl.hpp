@@ -5,7 +5,7 @@
     #error "Do not include MiscWinApi.Impl.hpp directly. Include MiscWinApi.hpp instead."
 #endif
 
-namespace nefarius::utilities
+namespace nefarius::winapi
 {
 	std::expected<std::wstring, nefarius::utilities::Win32Error> GetProcessFullPathImpl(DWORD PID);
 
