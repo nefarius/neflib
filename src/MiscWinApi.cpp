@@ -38,3 +38,22 @@ std::expected<GUID, Win32Error> nefarius::winapi::GUIDFromString(const std::stri
 
 	return guid;
 }
+
+SYSTEM_INFO nefarius::winapi::SafeGetNativeSystemInfo()
+{
+	SYSTEM_INFO systemInfo{};
+
+	using GetNativeSystemInfoProc = void(WINAPI*)(LPSYSTEM_INFO lpSystemInfo);
+    const auto pFun = (GetNativeSystemInfoProc)GetProcAddress(GetModuleHandleW(L"kernel32"), "GetNativeSystemInfo");
+
+	if (pFun)
+	{
+		pFun(&systemInfo);		
+	}
+	else
+	{
+		GetSystemInfo(&systemInfo);
+	}
+
+	return systemInfo;
+}
