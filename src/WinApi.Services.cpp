@@ -5,6 +5,17 @@
 
 using namespace nefarius::utilities;
 
+
+template
+std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(const std::wstring& ServiceName,
+	const std::wstring& DisplayName,
+	const std::wstring& BinaryPath);
+
+template
+std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(const std::string& ServiceName,
+	const std::string& DisplayName,
+	const std::string& BinaryPath);
+
 template <typename StringType>
 std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(const StringType& ServiceName,
 	const StringType& DisplayName,
@@ -52,6 +63,12 @@ std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(
 
 	return {};
 }
+
+template
+std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(const std::wstring& ServiceName);
+
+template
+std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(const std::string& ServiceName);
 
 template <typename StringType>
 std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(const StringType& ServiceName)
