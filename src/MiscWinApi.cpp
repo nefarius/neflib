@@ -96,7 +96,7 @@ std::expected<DWORD, Win32Error> nefarius::winapi::GetParentProcessID(DWORD Proc
 	return dwParentPID;
 }
 
-std::expected<std::wstring, Win32Error> GetProcessFullPathImpl(DWORD PID)
+std::expected<std::wstring, Win32Error> nefarius::utilities::GetProcessFullPathImpl(DWORD PID)
 {
 	const HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, PID);
 	if (hProcess == nullptr)
