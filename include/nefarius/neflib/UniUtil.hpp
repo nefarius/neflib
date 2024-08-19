@@ -13,7 +13,4 @@ namespace nefarius::utilities
 	template <typename StringType>
 	// ReSharper disable once CppFunctionIsNotImplemented
 	std::wstring ConvertToWide(const StringType& str);
-
-	template <typename StringType>
-	void StripNullCharacters(StringType& s);
 }

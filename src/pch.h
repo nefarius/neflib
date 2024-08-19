@@ -41,6 +41,7 @@
 //
 // Public headers
 // 
+#include <nefarius/neflib/AnyString.hpp>
 #include <nefarius/neflib/UniUtil.hpp>
 #include <nefarius/neflib/HDEVINFOHandleGuard.hpp>
 #include <nefarius/neflib/HKEYHandleGuard.hpp>

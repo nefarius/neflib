@@ -96,7 +96,7 @@ std::expected<DWORD, Win32Error> nefarius::winapi::GetParentProcessID(DWORD Proc
 	return dwParentPID;
 }
 
-template <typename StringType, typename>
+template <string_type StringType>
 std::expected<std::variant<std::string, std::wstring>, Win32Error> GetProcessFullPath(DWORD PID)
 {
 	const HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, PID);
@@ -126,7 +126,7 @@ std::expected<std::variant<std::string, std::wstring>, Win32Error> GetProcessFul
 	}
 	else
 	{
-		return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR, "Not a string type"));
+		static_assert(false, "Not a string type");
 	}
 
 	StripNullCharacters(processPath);

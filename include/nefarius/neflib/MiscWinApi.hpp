@@ -1,6 +1,7 @@
 // ReSharper disable CppRedundantQualifier
 #pragma once
 
+#include <nefarius/neflib/AnyString.hpp>
 #include <nefarius/neflib/Win32Error.hpp>
 
 namespace nefarius::winapi
@@ -11,11 +12,7 @@ namespace nefarius::winapi
 
 	std::expected<DWORD, nefarius::utilities::Win32Error> GetParentProcessID(DWORD ProcessId);
 
-	template <typename StringType,
-          typename = std::enable_if_t<
-              std::is_same_v<StringType, std::string> ||
-              std::is_same_v<StringType, std::wstring>
-          >>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<std::variant<std::string, std::wstring>, nefarius::utilities::Win32Error> GetProcessFullPath(DWORD PID);
 
 	namespace security

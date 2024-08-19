@@ -60,6 +60,9 @@
     <ClInclude Include="ScopeGuardHelper.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\nefarius\neflib\AnyString.hpp">
+      <Filter>Header Files\Public</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="UniUtil.cpp">
@@ -88,6 +91,9 @@
     </ClCompile>
     <ClCompile Include="WinApi.Security.cpp">
       <Filter>Source Files\WinApi</Filter>
+    </ClCompile>
+    <ClCompile Include="AnyString.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

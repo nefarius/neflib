@@ -95,6 +95,7 @@ My philosophy is having my code stay out of your project structures' and prefere
 //
 // Public headers
 // 
+#include <nefarius/neflib/AnyString.hpp>
 #include <nefarius/neflib/UniUtil.hpp>
 #include <nefarius/neflib/HDEVINFOHandleGuard.hpp>
 #include <nefarius/neflib/HKEYHandleGuard.hpp>
