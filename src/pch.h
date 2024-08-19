@@ -13,6 +13,7 @@
 #include <initguid.h>
 #include <devguid.h>
 #include <shellapi.h>
+#include <TlHelp32.h>
 
 //
 // Include consumed STL

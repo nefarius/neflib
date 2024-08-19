@@ -9,6 +9,8 @@ namespace nefarius::winapi
 
 	SYSTEM_INFO SafeGetNativeSystemInfo();
 
+	std::expected<DWORD, nefarius::utilities::Win32Error> GetParentProcessID(DWORD ProcessId);
+
 	namespace security
 	{
 		std::expected<bool, nefarius::utilities::Win32Error> IsAppRunningAsAdminMode();

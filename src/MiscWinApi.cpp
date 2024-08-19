@@ -57,3 +57,41 @@ SYSTEM_INFO nefarius::winapi::SafeGetNativeSystemInfo()
 
 	return systemInfo;
 }
+
+std::expected<DWORD, Win32Error> nefarius::winapi::GetParentProcessID(DWORD ProcessId)
+{
+	PROCESSENTRY32W pe32{sizeof(PROCESSENTRY32W)};
+	DWORD dwParentPID = 0;
+
+	const HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapshot == INVALID_HANDLE_VALUE)
+	{
+		return std::unexpected(Win32Error("CreateToolhelp32Snapshot"));
+	}
+
+	SCOPE_GUARD_CAPTURE({ CloseHandle(hSnapshot); }, hSnapshot);
+
+	if (Process32FirstW(hSnapshot, &pe32))
+	{
+		do
+		{
+			if (pe32.th32ProcessID == ProcessId)
+			{
+				dwParentPID = pe32.th32ParentProcessID;
+				break;
+			}
+		}
+		while (Process32NextW(hSnapshot, &pe32));
+
+		if (dwParentPID == 0)
+		{
+			return std::unexpected(Win32Error("Process32NextW"));
+		}
+	}
+	else
+	{
+		return std::unexpected(Win32Error("Process32FirstW"));
+	}
+
+	return dwParentPID;
+}
