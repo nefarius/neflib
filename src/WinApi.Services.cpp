@@ -5,9 +5,15 @@
 
 using namespace nefarius::utilities;
 
-std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(PCSTR ServiceName,
-	PCSTR DisplayName, PCSTR BinaryPath)
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(const StringType& ServiceName,
+	const StringType& DisplayName,
+	const StringType& BinaryPath)
 {
+	const auto serviceName = ConvertToNarrow(ServiceName);
+	const auto displayName = ConvertToNarrow(DisplayName);
+	const auto binaryPath = ConvertToNarrow(BinaryPath);
+
 	SC_HANDLE hSCManager = OpenSCManagerA(
 		nullptr,
 		nullptr,
@@ -23,13 +29,13 @@ std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(
 
 	SC_HANDLE hService = CreateServiceA(
 		hSCManager,
-		ServiceName,
-		DisplayName,
+		serviceName.c_str(),
+		displayName.c_str(),
 		SERVICE_START | DELETE | SERVICE_STOP,
 		SERVICE_KERNEL_DRIVER,
 		SERVICE_DEMAND_START,
 		SERVICE_ERROR_IGNORE,
-		BinaryPath,
+		binaryPath.c_str(),
 		nullptr,
 		nullptr,
 		nullptr,
@@ -47,8 +53,11 @@ std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(
 	return {};
 }
 
-std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(PCSTR ServiceName)
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(const StringType& ServiceName)
 {
+	const auto serviceName = ConvertToNarrow(ServiceName);
+
 	SC_HANDLE hSCManager = OpenSCManagerA(
 		nullptr,
 		nullptr,
@@ -64,7 +73,7 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 
 	SC_HANDLE hService = OpenServiceA(
 		hSCManager,
-		ServiceName,
+		serviceName.c_str(),
 		SERVICE_START | DELETE | SERVICE_STOP
 	);
 
@@ -83,8 +92,12 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 	return {};
 }
 
-std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::GetServiceStatus(PCSTR ServiceName)
+template <typename StringType>
+std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::GetServiceStatus(
+	const StringType& ServiceName)
 {
+	const auto serviceName = ConvertToNarrow(ServiceName);
+
 	SC_HANDLE sch = nullptr;
 	SC_HANDLE svc = nullptr;
 
@@ -107,7 +120,7 @@ std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::Ge
 
 	svc = OpenServiceA(
 		sch,
-		ServiceName,
+		serviceName.c_str(),
 		SERVICE_QUERY_STATUS
 	);
 	if (svc == nullptr)

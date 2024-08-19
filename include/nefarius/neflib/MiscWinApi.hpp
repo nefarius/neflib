@@ -51,12 +51,16 @@ namespace nefarius::winapi
 
 	namespace services
 	{
+		template <typename StringType>
 		std::expected<void, nefarius::utilities::Win32Error> CreateDriverService(
-			PCSTR ServiceName, PCSTR DisplayName, PCSTR BinaryPath);
+			const StringType& ServiceName, const StringType& DisplayName, const StringType& BinaryPath);
 
-		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverService(PCSTR ServiceName);
+		template <typename StringType>
+		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverService(const StringType& ServiceName);
 
-		std::expected<SERVICE_STATUS_PROCESS, nefarius::utilities::Win32Error> GetServiceStatus(PCSTR ServiceName);
+		template <typename StringType>
+		std::expected<SERVICE_STATUS_PROCESS, nefarius::utilities::Win32Error> GetServiceStatus(
+			const StringType& ServiceName);
 	}
 
 	namespace cli

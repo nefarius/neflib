@@ -21,14 +21,14 @@ namespace nefarius::devcon
 	};
 
 	std::expected<void, nefarius::utilities::Win32Error> AddDeviceClassFilter(const GUID* classGuid,
-	                                                                const std::wstring& filterName,
-	                                                                DeviceClassFilterPosition position);
+	                                                                          const std::wstring& filterName,
+	                                                                          DeviceClassFilterPosition position);
 
 	std::expected<void, nefarius::utilities::Win32Error> RemoveDeviceClassFilter(const GUID* classGuid,
-	                                                                   const std::wstring& filterName,
-	                                                                   DeviceClassFilterPosition position);
+		const std::wstring& filterName,
+		DeviceClassFilterPosition position);
 
 	std::expected<bool, nefarius::utilities::Win32Error> HasDeviceClassFilter(const GUID* classGuid,
-	                                                                const std::wstring& filterName,
-	                                                                DeviceClassFilterPosition position);
+	                                                                          const std::wstring& filterName,
+	                                                                          DeviceClassFilterPosition position);
 }

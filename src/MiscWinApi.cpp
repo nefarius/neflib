@@ -38,5 +38,3 @@ std::expected<GUID, Win32Error> nefarius::winapi::GUIDFromString(const std::stri
 
 	return guid;
 }
-
-
