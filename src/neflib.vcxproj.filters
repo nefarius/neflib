@@ -63,6 +63,9 @@
     <ClInclude Include="..\include\nefarius\neflib\AnyString.hpp">
       <Filter>Header Files\Public</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\nefarius\neflib\MiscWinApi.Impl.hpp">
+      <Filter>Header Files\Public</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="UniUtil.cpp">

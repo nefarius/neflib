@@ -183,6 +183,7 @@
     <ClInclude Include="..\include\nefarius\neflib\INFHandleGuard.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\LibraryHelper.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\MiscWinApi.hpp" />
+    <ClInclude Include="..\include\nefarius\neflib\MiscWinApi.Impl.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\MultiStringArray.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\UniUtil.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\Win32Error.hpp" />

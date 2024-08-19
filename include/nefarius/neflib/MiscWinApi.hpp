@@ -1,4 +1,5 @@
 // ReSharper disable CppRedundantQualifier
+// ReSharper disable CppUnusedIncludeDirective
 #pragma once
 
 #include <nefarius/neflib/AnyString.hpp>
@@ -13,7 +14,8 @@ namespace nefarius::winapi
 	std::expected<DWORD, nefarius::utilities::Win32Error> GetParentProcessID(DWORD ProcessId);
 
 	template <nefarius::utilities::string_type StringType>
-	std::expected<std::variant<std::string, std::wstring>, nefarius::utilities::Win32Error> GetProcessFullPath(DWORD PID);
+	std::expected<std::variant<std::string, std::wstring>, nefarius::utilities::Win32Error>
+	GetProcessFullPath(DWORD PID);
 
 	namespace security
 	{
@@ -91,3 +93,10 @@ namespace nefarius::winapi
 		std::expected<nefarius::winapi::cli::CliArgsResult, nefarius::utilities::Win32Error> GetCommandLineArgs();
 	}
 }
+
+//
+// Include stuff below here that can not be shipped pre-compiled
+// 
+
+#define NEFLIB_MISCWINAPI_IMPL_INCLUDED
+#include <nefarius/neflib/MiscWinApi.Impl.hpp>
