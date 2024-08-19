@@ -50,16 +50,17 @@ namespace nefarius::devcon
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
 	 * @date	07.08.2024
 	 *
-	 * @param 		  	hardwareId	  	The Hardware ID of the devices to affect.
-	 * @param 		  	fullInfPath   	Full pathname to the INF file.
-	 * @param [in,out]	rebootRequired	If non-null, true if reboot required.
-	 * @param 		  	force		  	(Optional) True to force.
+	 * @param 		  	HardwareId	  	The Hardware ID of the devices to affect.
+	 * @param 		  	FullInfPath   	Full pathname to the INF file.
+	 * @param [in,out]	RebootRequired	If non-null, true if reboot required.
+	 * @param 		  	Force		  	(Optional) True to force.
 	 *
 	 * @returns	A std::expected&lt;void,nefarius::util::Win32Error&gt;
 	 */
-	std::expected<void, nefarius::utilities::Win32Error> Update(const std::wstring& hardwareId,
-	                                                            const std::wstring& fullInfPath, bool* rebootRequired,
-	                                                            bool force = false);
+	template <typename StringType>
+	std::expected<void, nefarius::utilities::Win32Error> Update(const StringType& HardwareId,
+	                                                            const StringType& FullInfPath, bool* RebootRequired,
+	                                                            bool Force = false);
 
 	/**
      * Installs a given driver into the driver store.
@@ -67,13 +68,14 @@ namespace nefarius::devcon
      * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
      * @date	07.08.2024
      *
-     * @param 		  	fullInfPath   	Full pathname of the INF file.
-     * @param [in,out]	rebootRequired	If non-null, true if reboot required.
+     * @param 		  	FullInfPath   	Full pathname of the INF file.
+     * @param [in,out]	RebootRequired	If non-null, true if reboot required.
      *
      * @returns	A std::expected&lt;void,nefarius::util::Win32Error&gt;
      */
-	std::expected<void, nefarius::utilities::Win32Error> InstallDriver(const std::wstring& fullInfPath,
-	                                                                   bool* rebootRequired);
+	template <typename StringType>
+	std::expected<void, nefarius::utilities::Win32Error> InstallDriver(const StringType& FullInfPath,
+	                                                                   bool* RebootRequired);
 
 	/**
 	 * Uninstalls a given driver.
@@ -81,13 +83,14 @@ namespace nefarius::devcon
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
 	 * @date	07.08.2024
 	 *
-	 * @param 		  	fullInfPath   	Full pathname of the INF file.
-	 * @param [in,out]	rebootRequired	If non-null, true if reboot required.
+	 * @param 		  	FullInfPath   	Full pathname of the INF file.
+	 * @param [in,out]	RebootRequired	If non-null, true if reboot required.
 	 *
 	 * @returns	A std::expected&lt;void,nefarius::util::Win32Error&gt;
 	 */
-	std::expected<void, nefarius::utilities::Win32Error> UninstallDriver(const std::wstring& fullInfPath,
-	                                                                     bool* rebootRequired);
+	template <typename StringType>
+	std::expected<void, nefarius::utilities::Win32Error> UninstallDriver(const StringType& FullInfPath,
+	                                                                     bool* RebootRequired);
 
 	/**
 	 * Uninstalls all devices and active function driver matched by provided device class and

@@ -389,10 +389,24 @@ std::expected<void, Win32Error> nefarius::devcon::Create(const StringType& Class
 	return {};
 }
 
-std::expected<void, Win32Error> nefarius::devcon::Update(const std::wstring& hardwareId,
-                                                         const std::wstring& fullInfPath,
-                                                         bool* rebootRequired, bool force)
+template
+std::expected<void, Win32Error> nefarius::devcon::Update(const std::wstring& HardwareId,
+                                                         const std::wstring& FullInfPath,
+                                                         bool* RebootRequired, bool Force);
+
+template
+std::expected<void, Win32Error> nefarius::devcon::Update(const std::string& HardwareId,
+                                                         const std::string& FullInfPath,
+                                                         bool* RebootRequired, bool Force);
+
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::devcon::Update(const StringType& HardwareId,
+                                                         const StringType& FullInfPath,
+                                                         bool* RebootRequired, bool Force)
 {
+	const std::wstring hardwareId = ConvertToWide(HardwareId);
+	const std::wstring fullInfPath = ConvertToWide(FullInfPath);
+
 	Newdev newdev;
 	DWORD flags = 0;
 	BOOL reboot = FALSE;
@@ -405,7 +419,7 @@ std::expected<void, Win32Error> nefarius::devcon::Update(const std::wstring& har
 		return std::unexpected(Win32Error(ERROR_BAD_PATHNAME));
 	}
 
-	if (force)
+	if (Force)
 		flags |= INSTALLFLAG_FORCE;
 
 	switch (newdev.CallFunction(
@@ -422,17 +436,28 @@ std::expected<void, Win32Error> nefarius::devcon::Update(const std::wstring& har
 	case FunctionCallResult::Failure:
 		return std::unexpected(Win32Error(GetLastError()));
 	case FunctionCallResult::Success:
-		if (rebootRequired)
-			*rebootRequired = reboot > 0;
+		if (RebootRequired)
+			*RebootRequired = reboot > 0;
 		return {};
 	}
 
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
 
-std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const std::wstring& fullInfPath,
-                                                                bool* rebootRequired)
+template
+std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const std::wstring& FullInfPath,
+                                                                bool* RebootRequired);
+
+template
+std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const std::string& FullInfPath,
+                                                                bool* RebootRequired);
+
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const StringType& FullInfPath,
+                                                                bool* RebootRequired)
 {
+	const std::wstring fullInfPath = ConvertToWide(FullInfPath);
+
 	Newdev newdev;
 	BOOL reboot;
 	WCHAR normalisedInfPath[MAX_PATH] = {};
@@ -457,17 +482,28 @@ std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const std::wstri
 	case FunctionCallResult::Failure:
 		return std::unexpected(Win32Error(GetLastError()));
 	case FunctionCallResult::Success:
-		if (rebootRequired)
-			*rebootRequired = reboot > 0;
+		if (RebootRequired)
+			*RebootRequired = reboot > 0;
 		return {};
 	}
 
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
 
-std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const std::wstring& fullInfPath,
-                                                                  bool* rebootRequired)
+template
+std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const std::wstring& FullInfPath,
+                                                                  bool* RebootRequired);
+
+template
+std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const std::string& FullInfPath,
+                                                                  bool* RebootRequired);
+
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const StringType& FullInfPath,
+                                                                  bool* RebootRequired)
 {
+	const std::wstring fullInfPath = ConvertToWide(FullInfPath);
+
 	Newdev newdev;
 	BOOL reboot;
 	WCHAR normalisedInfPath[MAX_PATH] = {};
@@ -492,8 +528,8 @@ std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const std::wst
 	case FunctionCallResult::Failure:
 		return std::unexpected(Win32Error(GetLastError()));
 	case FunctionCallResult::Success:
-		if (rebootRequired)
-			*rebootRequired = reboot > 0;
+		if (RebootRequired)
+			*RebootRequired = reboot > 0;
 		return {};
 	}
 
