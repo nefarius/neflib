@@ -96,3 +96,25 @@ std::expected<DWORD, Win32Error> nefarius::winapi::GetParentProcessID(DWORD Proc
 	return dwParentPID;
 }
 
+std::expected<std::wstring, Win32Error> GetProcessFullPathImpl(DWORD PID)
+{
+	const HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, PID);
+	if (hProcess == nullptr)
+	{
+		return std::unexpected(Win32Error("OpenProcess"));
+	}
+
+	SCOPE_GUARD_CAPTURE({ CloseHandle(hProcess); }, hProcess);
+
+	DWORD numChars = MAX_PATH;
+	std::wstring processPath(numChars, '\0');
+
+	if (!QueryFullProcessImageNameW(hProcess, 0, processPath.data(), &numChars))
+	{
+		return std::unexpected(Win32Error("QueryFullProcessImageNameW"));
+	}
+
+	StripNullCharacters(processPath);
+
+	return processPath;
+}

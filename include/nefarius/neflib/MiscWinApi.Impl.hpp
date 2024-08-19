@@ -4,41 +4,21 @@
     #error "Do not include MiscWinApi.Impl.hpp directly. Include MiscWinApi.hpp instead."
 #endif
 
+std::expected<std::wstring, nefarius::utilities::Win32Error> GetProcessFullPathImpl(DWORD PID);
 
 template <nefarius::utilities::string_type StringType>
 std::expected<std::variant<std::string, std::wstring>, nefarius::utilities::Win32Error> GetProcessFullPath(DWORD PID)
 {
-	const HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, PID);
-	if (hProcess == nullptr)
-	{
-		return std::unexpected(nefarius::utilities::Win32Error("OpenProcess"));
-	}
-
-	SCOPE_GUARD_CAPTURE({ CloseHandle(hProcess); }, hProcess);
-
-	DWORD numChars = MAX_PATH;
-	StringType processPath(numChars, '\0');
-
 	if constexpr (std::is_same_v<StringType, std::wstring>)
 	{
-		if (!QueryFullProcessImageNameW(hProcess, 0, processPath.data(), &numChars))
-		{
-			return std::unexpected(nefarius::utilities::Win32Error("QueryFullProcessImageNameW"));
-		}
+		return GetProcessFullPathImpl(PID);
 	}
 	else if constexpr (std::is_same_v<StringType, std::string>)
 	{
-		if (!QueryFullProcessImageNameA(hProcess, 0, processPath.data(), &numChars))
-		{
-			return std::unexpected(nefarius::utilities::Win32Error("QueryFullProcessImageNameA"));
-		}
+		return nefarius::utilities::ConvertToNarrow(GetProcessFullPathImpl(PID));
 	}
 	else
 	{
 		static_assert(false, "Not a string type");
 	}
-
-	StripNullCharacters(processPath);
-
-	return processPath;
 }
