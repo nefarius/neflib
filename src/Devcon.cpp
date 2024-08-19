@@ -79,7 +79,8 @@ namespace
 
 	DWORD Win32FromHResult(HRESULT hr)
 	{
-		if ((hr & 0xFFFF0000) == MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, 0))  // NOLINT(clang-diagnostic-sign-compare)
+		if ((hr & 0xFFFF0000) == MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, 0))
+		// NOLINT(clang-diagnostic-sign-compare)
 		{
 			return HRESULT_CODE(hr);
 		}
@@ -319,17 +320,28 @@ namespace
 }
 
 
-std::expected<void, Win32Error> nefarius::devcon::Create(const std::wstring& className, const GUID* classGuid,
-                                                         const WideMultiStringArray& hardwareId)
+template
+std::expected<void, Win32Error> nefarius::devcon::Create(const std::wstring& ClassName, const GUID* ClassGuid,
+                                                         const WideMultiStringArray& HardwareId);
+
+template
+std::expected<void, Win32Error> nefarius::devcon::Create(const std::string& ClassName, const GUID* ClassGuid,
+                                                         const WideMultiStringArray& HardwareId);
+
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::devcon::Create(const StringType& ClassName, const GUID* ClassGuid,
+                                                         const WideMultiStringArray& HardwareId)
 {
-	guards::HDEVINFOHandleGuard hDevInfo(SetupDiCreateDeviceInfoList(classGuid, nullptr));
+	const std::wstring className = ConvertToWide(ClassName);
+
+	guards::HDEVINFOHandleGuard hDevInfo(SetupDiCreateDeviceInfoList(ClassGuid, nullptr));
 
 	if (hDevInfo.is_invalid())
 	{
 		return std::unexpected(Win32Error("SetupDiCreateDeviceInfoList"));
 	}
 
-	SP_DEVINFO_DATA deviceInfoData;
+	SP_DEVINFO_DATA deviceInfoData{};
 	deviceInfoData.cbSize = sizeof(deviceInfoData);
 
 	//
@@ -338,7 +350,7 @@ std::expected<void, Win32Error> nefarius::devcon::Create(const std::wstring& cla
 	if (!SetupDiCreateDeviceInfoW(
 		hDevInfo.get(),
 		className.c_str(),
-		classGuid,
+		ClassGuid,
 		nullptr,
 		nullptr,
 		DICD_GENERATE_ID,
@@ -355,8 +367,8 @@ std::expected<void, Win32Error> nefarius::devcon::Create(const std::wstring& cla
 		hDevInfo.get(),
 		&deviceInfoData,
 		SPDRP_HARDWAREID,
-		hardwareId.data(),
-		static_cast<DWORD>(hardwareId.size())
+		HardwareId.data(),
+		static_cast<DWORD>(HardwareId.size())
 	))
 	{
 		return std::unexpected(Win32Error("SetupDiSetDeviceRegistryPropertyW"));

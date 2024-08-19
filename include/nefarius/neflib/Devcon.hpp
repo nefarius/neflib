@@ -33,15 +33,16 @@ namespace nefarius::devcon
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
 	 * @date	06.08.2024
 	 *
-	 * @param 	className 	Name of the device class (System, HIDClass, USB, etc.).
-	 * @param 	classGuid 	Unique identifier for the device class.
-	 * @param 	hardwareId	The Hardware ID to set.
+	 * @param 	ClassName 	Name of the device class (System, HIDClass, USB, etc.).
+	 * @param 	ClassGuid 	Unique identifier for the device class.
+	 * @param 	HardwareId	The Hardware ID to set.
 	 *
 	 * @returns	A std::expected&lt;void,nefarius::util::Win32Error&gt;
 	 */
-	std::expected<void, nefarius::utilities::Win32Error> Create(const std::wstring& className, const GUID* classGuid,
+	template <typename StringType>
+	std::expected<void, nefarius::utilities::Win32Error> Create(const StringType& ClassName, const GUID* ClassGuid,
 	                                                            const nefarius::utilities::WideMultiStringArray&
-	                                                            hardwareId);
+	                                                            HardwareId);
 
 	/**
 	 * Triggers a driver update on all devices matching a given hardware ID with using the provided INF.
