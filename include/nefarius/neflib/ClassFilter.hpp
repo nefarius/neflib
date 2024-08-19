@@ -20,15 +20,18 @@ namespace nefarius::devcon
 		Lower
 	};
 
-	std::expected<void, nefarius::utilities::Win32Error> AddDeviceClassFilter(const GUID* classGuid,
-	                                                                          const std::wstring& filterName,
-	                                                                          DeviceClassFilterPosition position);
+	template <typename StringType>
+	std::expected<void, nefarius::utilities::Win32Error> AddDeviceClassFilter(const GUID* ClassGuid,
+	                                                                          const StringType& FilterName,
+	                                                                          DeviceClassFilterPosition Position);
 
-	std::expected<void, nefarius::utilities::Win32Error> RemoveDeviceClassFilter(const GUID* classGuid,
-		const std::wstring& filterName,
-		DeviceClassFilterPosition position);
+	template <typename StringType>
+	std::expected<void, nefarius::utilities::Win32Error> RemoveDeviceClassFilter(const GUID* ClassGuid,
+		const StringType& FilterName,
+		DeviceClassFilterPosition Position);
 
-	std::expected<bool, nefarius::utilities::Win32Error> HasDeviceClassFilter(const GUID* classGuid,
-	                                                                          const std::wstring& filterName,
-	                                                                          DeviceClassFilterPosition position);
+	template <typename StringType>
+	std::expected<bool, nefarius::utilities::Win32Error> HasDeviceClassFilter(const GUID* ClassGuid,
+	                                                                          const StringType& FilterName,
+	                                                                          DeviceClassFilterPosition Position);
 }

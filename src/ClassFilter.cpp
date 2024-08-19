@@ -46,18 +46,31 @@ namespace
 	}
 }
 
-std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUID* classGuid,
-                                                                       const std::wstring& filterName,
-                                                                       DeviceClassFilterPosition position)
+template
+std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUID* ClassGuid,
+                                                                       const std::wstring& FilterName,
+                                                                       DeviceClassFilterPosition Position);
+
+template
+std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUID* ClassGuid,
+                                                                       const std::string& FilterName,
+                                                                       DeviceClassFilterPosition Position);
+
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUID* ClassGuid,
+                                                                       const StringType& FilterName,
+                                                                       DeviceClassFilterPosition Position)
 {
-	HKEYHandleGuard key(SetupDiOpenClassRegKey(classGuid, KEY_ALL_ACCESS));
+	const auto filterName = ConvertToWide(FilterName);
+
+	HKEYHandleGuard key(SetupDiOpenClassRegKey(ClassGuid, KEY_ALL_ACCESS));
 
 	if (key.is_invalid())
 	{
 		return std::unexpected(Win32Error("SetupDiOpenClassRegKey"));
 	}
 
-	LPCWSTR filterValue = (position == DeviceClassFilterPosition::Lower) ? L"LowerFilters" : L"UpperFilters";
+	LPCWSTR filterValue = (Position == DeviceClassFilterPosition::Lower) ? L"LowerFilters" : L"UpperFilters";
 	DWORD type, size;
 	std::vector<std::wstring> filters;
 
@@ -108,7 +121,7 @@ std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUI
 			filters.emplace_back(filterName);
 		}
 
-		const std::vector<wchar_t> multiString = BuildMultiString(filters);
+		const std::vector<wchar_t> multiString = ::BuildMultiString(filters);
 
 		const DWORD dataSize = static_cast<DWORD>(multiString.size() * sizeof(wchar_t));
 
@@ -135,7 +148,7 @@ std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUI
 	{
 		filters.emplace_back(filterName);
 
-		const std::vector<wchar_t> multiString = BuildMultiString(filters);
+		const std::vector<wchar_t> multiString = ::BuildMultiString(filters);
 
 		const DWORD dataSize = static_cast<DWORD>(multiString.size() * sizeof(wchar_t));
 
@@ -159,18 +172,31 @@ std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUI
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
 
+template
 std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
-	const GUID* classGuid, const std::wstring& filterName,
-	DeviceClassFilterPosition position)
+	const GUID* ClassGuid, const std::wstring& FilterName,
+	DeviceClassFilterPosition Position);
+
+template
+std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
+	const GUID* ClassGuid, const std::string& FilterName,
+	DeviceClassFilterPosition Position);
+
+template <typename StringType>
+std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
+	const GUID* ClassGuid, const StringType& FilterName,
+	DeviceClassFilterPosition Position)
 {
-	HKEYHandleGuard key(SetupDiOpenClassRegKey(classGuid, KEY_ALL_ACCESS));
+	const std::wstring filterName = ConvertToWide(FilterName);
+
+	HKEYHandleGuard key(SetupDiOpenClassRegKey(ClassGuid, KEY_ALL_ACCESS));
 
 	if (key.is_invalid())
 	{
 		return std::unexpected(Win32Error("SetupDiOpenClassRegKey"));
 	}
 
-	LPCWSTR filterValue = (position == DeviceClassFilterPosition::Lower) ? L"LowerFilters" : L"UpperFilters";
+	LPCWSTR filterValue = (Position == DeviceClassFilterPosition::Lower) ? L"LowerFilters" : L"UpperFilters";
 	DWORD type, size;
 
 	auto status = RegQueryValueExW(
@@ -219,7 +245,7 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
 			len = wcslen(&temp[index]);
 		}
 
-		const std::vector<wchar_t> multiString = BuildMultiString(filters);
+		const std::vector<wchar_t> multiString = ::BuildMultiString(filters);
 
 		const DWORD dataSize = static_cast<DWORD>(multiString.size() * sizeof(wchar_t));
 
@@ -250,18 +276,31 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
 
-std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* classGuid,
-                                                                       const std::wstring& filterName,
-                                                                       DeviceClassFilterPosition position)
+template
+std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* ClassGuid,
+                                                                       const std::wstring& FilterName,
+                                                                       DeviceClassFilterPosition Position);
+
+template
+std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* ClassGuid,
+                                                                       const std::string& FilterName,
+                                                                       DeviceClassFilterPosition Position);
+
+template <typename StringType>
+std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* ClassGuid,
+                                                                       const StringType& FilterName,
+                                                                       DeviceClassFilterPosition Position)
 {
-	HKEYHandleGuard key(SetupDiOpenClassRegKey(classGuid, KEY_READ));
+	const std::wstring filterName = ConvertToWide(FilterName);
+
+	HKEYHandleGuard key(SetupDiOpenClassRegKey(ClassGuid, KEY_READ));
 
 	if (key.is_invalid())
 	{
 		return std::unexpected(Win32Error("SetupDiOpenClassRegKey"));
 	}
 
-	LPCWSTR filterValue = (position == DeviceClassFilterPosition::Lower) ? L"LowerFilters" : L"UpperFilters";
+	LPCWSTR filterValue = (Position == DeviceClassFilterPosition::Lower) ? L"LowerFilters" : L"UpperFilters";
 	DWORD type, size;
 	std::vector<std::wstring> filters;
 
