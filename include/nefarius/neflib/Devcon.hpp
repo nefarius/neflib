@@ -99,14 +99,15 @@ namespace nefarius::devcon
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
 	 * @date	09.08.2024
 	 *
-	 * @param 		  	classGuid	  	Device class GUID.
-	 * @param 		  	hardwareId	  	Identifier for the hardware.
-	 * @param [in,out]	rebootRequired	If non-null, true if reboot required.
+	 * @param 		  	ClassGuid	  	Device class GUID.
+	 * @param 		  	HardwareId	  	Identifier for the hardware.
+	 * @param [in,out]	RebootRequired	If non-null, true if reboot required.
 	 *
 	 * @returns	A std::vector&lt;std::expected&lt;void,nefarius::utilities::Win32Error&gt;&gt;
 	 */
+	template <typename StringType>
 	std::vector<std::expected<void, nefarius::utilities::Win32Error>> UninstallDeviceAndDriver(
-		const GUID* classGuid, const std::wstring& hardwareId, bool* rebootRequired);
+		const GUID* ClassGuid, const StringType& HardwareId, bool* RebootRequired);
 
 	/**
 	 * Installs a primitive driver.

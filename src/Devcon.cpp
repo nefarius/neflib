@@ -1,4 +1,5 @@
 // ReSharper disable CppClangTidyModernizeUseEmplace
+// ReSharper disable CppCStyleCast
 #include "pch.h"
 
 #include <nefarius/neflib/Devcon.hpp>
@@ -536,15 +537,26 @@ std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const StringTy
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
 
+template
 std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAndDriver(
-	const GUID* classGuid, const std::wstring& hardwareId, bool* rebootRequired)
+	const GUID* ClassGuid, const std::wstring& HardwareId, bool* RebootRequired);
+
+template
+std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAndDriver(
+	const GUID* ClassGuid, const std::string& HardwareId, bool* RebootRequired);
+
+template <typename StringType>
+std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAndDriver(
+	const GUID* ClassGuid, const StringType& HardwareId, bool* RebootRequired)
 {
+	const std::wstring hardwareId = ConvertToWide(HardwareId);
+
 	std::vector<std::expected<void, Win32Error>> results;
 
 	SP_DEVINFO_DATA spDevInfoData;
 
 	guards::HDEVINFOHandleGuard hDevInfo(SetupDiGetClassDevs(
-		classGuid,
+		ClassGuid,
 		nullptr,
 		nullptr,
 		DIGCF_PRESENT
@@ -584,7 +596,7 @@ std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAn
 				results.push_back(::uninstall_device_and_driver(
 					hDevInfo.get(),
 					&spDevInfoData,
-					rebootRequired
+					RebootRequired
 				));
 				break;
 			}
