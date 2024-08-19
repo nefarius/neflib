@@ -92,6 +92,14 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 	return {};
 }
 
+template
+std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::GetServiceStatus(
+	const std::string& ServiceName);
+
+template
+std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::GetServiceStatus(
+	const std::wstring& ServiceName);
+
 template <typename StringType>
 std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::GetServiceStatus(
 	const StringType& ServiceName)
