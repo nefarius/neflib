@@ -7,12 +7,12 @@
 
 namespace nefarius::winapi
 {
-	std::expected<std::wstring, nefarius::utilities::Win32Error> GetProcessFullPathImpl(DWORD PID);
-
 	template <nefarius::utilities::string_type StringType>
 	std::expected<std::variant<std::string, std::wstring>, nefarius::utilities::Win32Error>
 	GetProcessFullPath(DWORD PID)
 	{
+		std::expected<std::wstring, nefarius::utilities::Win32Error> GetProcessFullPathImpl(DWORD ProcessID);
+
 		if constexpr (std::is_same_v<StringType, std::wstring>)
 		{
 			return GetProcessFullPathImpl(PID);
