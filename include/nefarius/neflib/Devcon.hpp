@@ -7,11 +7,12 @@
 
 namespace nefarius::devcon
 {
+	template <nefarius::utilities::string_type StringType>
 	struct FindByHwIdResult
 	{
-		std::vector<std::wstring> HardwareIds;
+		std::vector<StringType> HardwareIds;
 
-		std::wstring Name;
+		StringType Name;
 
 		union
 		{
@@ -216,16 +217,17 @@ namespace nefarius::devcon
 	 * @returns	True if at least one match was found, false otherwise.
 	 */
 	template <nefarius::utilities::string_type StringType>
-	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error> FindByHwId(
+	std::expected<std::vector<nefarius::devcon::FindByHwIdResult<StringType>>, nefarius::utilities::Win32Error>
+	FindByHwId(
 		const StringType& Matchstring);
 
 	template
-	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error>
+	std::expected<std::vector<nefarius::devcon::FindByHwIdResult<std::wstring>>, nefarius::utilities::Win32Error>
 	nefarius::devcon::FindByHwId(
 		const std::wstring& Matchstring);
 
 	template
-	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error>
+	std::expected<std::vector<nefarius::devcon::FindByHwIdResult<std::string>>, nefarius::utilities::Win32Error>
 	nefarius::devcon::FindByHwId(
 		const std::string& Matchstring);
 

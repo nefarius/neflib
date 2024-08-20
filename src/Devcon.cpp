@@ -32,13 +32,13 @@ namespace
 		//
 		// Query required size
 		// 
-		(void)SetupDiGetDeviceRegistryProperty(DeviceInfoSet,
-		                                       DeviceInfoData,
-		                                       Property,
-		                                       &propertyRegDataType,
-		                                       NULL,
-		                                       0,
-		                                       &sizeRequired);
+		(void)SetupDiGetDeviceRegistryPropertyW(DeviceInfoSet,
+		                                        DeviceInfoData,
+		                                        Property,
+		                                        &propertyRegDataType,
+		                                        NULL,
+		                                        0,
+		                                        &sizeRequired);
 
 		DWORD win32Error = GetLastError();
 
@@ -47,7 +47,7 @@ namespace
 		// 
 		if (win32Error == ERROR_INVALID_DATA)
 		{
-			return std::unexpected(Win32Error(ERROR_NOT_FOUND, "SetupDiGetDeviceRegistryProperty"));
+			return std::unexpected(Win32Error(ERROR_NOT_FOUND, "SetupDiGetDeviceRegistryPropertyW"));
 		}
 
 		//
@@ -55,7 +55,7 @@ namespace
 		// 
 		if (win32Error != ERROR_INSUFFICIENT_BUFFER)
 		{
-			return std::unexpected(Win32Error(win32Error, "SetupDiGetDeviceRegistryProperty"));
+			return std::unexpected(Win32Error(win32Error, "SetupDiGetDeviceRegistryPropertyW"));
 		}
 
 		auto buffer = wil::make_unique_hlocal_nothrow<uint8_t[]>(sizeRequired);
@@ -63,17 +63,17 @@ namespace
 		//
 		// Query property value
 		// 
-		if (!SetupDiGetDeviceRegistryProperty(DeviceInfoSet,
-		                                      DeviceInfoData,
-		                                      Property,
-		                                      &propertyRegDataType,
-		                                      buffer.get(),
-		                                      sizeRequired,
-		                                      &sizeRequired))
+		if (!SetupDiGetDeviceRegistryPropertyW(DeviceInfoSet,
+		                                       DeviceInfoData,
+		                                       Property,
+		                                       &propertyRegDataType,
+		                                       buffer.get(),
+		                                       sizeRequired,
+		                                       &sizeRequired))
 		{
 			win32Error = GetLastError();
 			buffer.release();
-			return std::unexpected(Win32Error(win32Error, "SetupDiGetDeviceRegistryProperty"));
+			return std::unexpected(Win32Error(win32Error, "SetupDiGetDeviceRegistryPropertyW"));
 		}
 
 		return DeviceRegistryPropertyResult{std::move(buffer), sizeRequired, propertyRegDataType};
@@ -799,7 +799,7 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const Stri
 }
 
 template <nefarius::utilities::string_type StringType>
-std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefarius::devcon::FindByHwId(
+std::expected<std::vector<nefarius::devcon::FindByHwIdResult<StringType>>, Win32Error> nefarius::devcon::FindByHwId(
 	const StringType& Matchstring)
 {
 	const std::wstring matchstring = ConvertToWide(Matchstring);
@@ -807,7 +807,7 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 	DWORD total = 0;
 	SP_DEVINFO_DATA spDevInfoData;
 
-	std::vector<FindByHwIdResult> results;
+	std::vector<FindByHwIdResult<StringType>> results;
 
 	guards::HDEVINFOHandleGuard hDevInfo(SetupDiGetClassDevs(
 		nullptr,
@@ -836,15 +836,15 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 			continue;
 		}
 
-		LPTSTR hwIdsBuffer = (LPTSTR)hwIdProperty.value().Data.get();
+		LPWSTR hwIdsBuffer = (LPWSTR)hwIdProperty.value().Data.get();
 
 		std::vector<std::wstring> entries;
-		const TCHAR* p = hwIdsBuffer;
+		const WCHAR* p = hwIdsBuffer;
 
 		while (*p)
 		{
 			entries.emplace_back(p);
-			p += _tcslen(p) + 1;
+			p += wcslen(p) + 1;
 		}
 
 		bool foundMatch = FALSE;
@@ -863,7 +863,7 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 		{
 			total++;
 
-			FindByHwIdResult result{entries};
+			FindByHwIdResult<StringType> result;
 
 			const auto descProperty = GetDeviceRegistryProperty(
 				hDevInfo.get(),
@@ -871,7 +871,7 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 				SPDRP_DEVICEDESC
 			);
 
-			LPTSTR nameBuffer = NULL;
+			LPWSTR nameBuffer = NULL;
 
 			//
 			// Try Device Description...
@@ -892,14 +892,14 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 					continue;
 				}
 
-				nameBuffer = (LPTSTR)nameProperty.value().Data.get();
+				nameBuffer = (LPWSTR)nameProperty.value().Data.get();
 			}
 			else
 			{
-				nameBuffer = (LPTSTR)descProperty.value().Data.get();
+				nameBuffer = (LPWSTR)descProperty.value().Data.get();
 			}
 
-			result.Name = std::wstring(nameBuffer);
+			const auto resultName = std::wstring(nameBuffer);
 
 			// Build a list of driver info items that we will retrieve below
 			if (!SetupDiBuildDriverInfoList(hDevInfo.get(), &spDevInfoData, SPDIT_COMPATDRIVER))
@@ -923,6 +923,18 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefar
 			if (!SetupDiEnumDriverInfo(hDevInfo.get(), &spDevInfoData, SPDIT_COMPATDRIVER, 0, &drvInfo))
 			{
 				continue;
+			}
+
+			if constexpr (std::is_same_v<StringType, std::wstring>)
+			{
+				result.HardwareIds = entries;
+				result.Name = resultName;
+			}
+			else if constexpr (std::is_same_v<StringType, std::string>)
+			{
+				result.HardwareIds.reserve(entries.size());
+				std::transform(entries.begin(), entries.end(), result.HardwareIds.begin(), ConvertWideToANSI);
+				result.Name = ConvertToNarrow(resultName);
 			}
 
 			result.Version.Major = (drvInfo.DriverVersion >> 48) & 0xFFFF;
