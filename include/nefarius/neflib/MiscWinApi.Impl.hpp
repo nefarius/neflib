@@ -19,7 +19,7 @@ namespace nefarius::winapi
 		}
 		else if constexpr (std::is_same_v<StringType, std::string>)
 		{
-			return nefarius::utilities::ConvertToNarrow(GetProcessFullPathImpl(PID));
+			return nefarius::utilities::ConvertWideToANSI(GetProcessFullPathImpl(PID));
 		}
 		else
 		{
