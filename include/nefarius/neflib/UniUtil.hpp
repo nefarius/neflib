@@ -37,7 +37,7 @@ namespace nefarius::utilities
 		}
 		else if constexpr (std::is_same_v<StringType, std::string>)
 		{
-			return ConvertAnsiToWide(str);
+			return nefarius::utilities::ConvertAnsiToWide(str);
 		}
 		else
 		{
