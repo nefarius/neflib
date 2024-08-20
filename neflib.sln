@@ -14,16 +14,22 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM64 = Debug|ARM64
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		Release|ARM64 = Release|ARM64
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{57BEA14F-5171-4B06-B71F-007E5918D923}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{57BEA14F-5171-4B06-B71F-007E5918D923}.Debug|ARM64.Build.0 = Debug|ARM64
 		{57BEA14F-5171-4B06-B71F-007E5918D923}.Debug|x64.ActiveCfg = Debug|x64
 		{57BEA14F-5171-4B06-B71F-007E5918D923}.Debug|x64.Build.0 = Debug|x64
 		{57BEA14F-5171-4B06-B71F-007E5918D923}.Debug|x86.ActiveCfg = Debug|Win32
 		{57BEA14F-5171-4B06-B71F-007E5918D923}.Debug|x86.Build.0 = Debug|Win32
+		{57BEA14F-5171-4B06-B71F-007E5918D923}.Release|ARM64.ActiveCfg = Release|ARM64
+		{57BEA14F-5171-4B06-B71F-007E5918D923}.Release|ARM64.Build.0 = Release|ARM64
 		{57BEA14F-5171-4B06-B71F-007E5918D923}.Release|x64.ActiveCfg = Release|x64
 		{57BEA14F-5171-4B06-B71F-007E5918D923}.Release|x64.Build.0 = Release|x64
 		{57BEA14F-5171-4B06-B71F-007E5918D923}.Release|x86.ActiveCfg = Release|Win32
