@@ -16,7 +16,7 @@ std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(
 	const std::string& DisplayName,
 	const std::string& BinaryPath);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(const StringType& ServiceName,
 	const StringType& DisplayName,
 	const StringType& BinaryPath)
@@ -70,7 +70,7 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 template
 std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(const std::string& ServiceName);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(const StringType& ServiceName)
 {
 	const auto serviceName = ConvertToNarrow(ServiceName);
@@ -117,7 +117,7 @@ template
 std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::GetServiceStatus(
 	const std::wstring& ServiceName);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::GetServiceStatus(
 	const StringType& ServiceName)
 {

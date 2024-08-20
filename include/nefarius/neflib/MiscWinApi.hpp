@@ -53,26 +53,26 @@ namespace nefarius::winapi
 			return nefarius::utilities::ConvertAnsiToWide(to_string(version));
 		}
 
-		template <typename StringType>
+		template <nefarius::utilities::string_type StringType>
 		std::expected<void, nefarius::utilities::Win32Error> TakeFileOwnership(const StringType& FilePath);
 
-		template <typename StringType>
+		template <nefarius::utilities::string_type StringType>
 		std::expected<Version, nefarius::utilities::Win32Error> GetProductVersionFromFile(const StringType& FilePath);
 
-		template <typename StringType>
+		template <nefarius::utilities::string_type StringType>
 		std::expected<Version, nefarius::utilities::Win32Error> GetFileVersionFromFile(const StringType& FilePath);
 	}
 
 	namespace services
 	{
-		template <typename StringType>
+		template <nefarius::utilities::string_type StringType>
 		std::expected<void, nefarius::utilities::Win32Error> CreateDriverService(
 			const StringType& ServiceName, const StringType& DisplayName, const StringType& BinaryPath);
 
-		template <typename StringType>
+		template <nefarius::utilities::string_type StringType>
 		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverService(const StringType& ServiceName);
 
-		template <typename StringType>
+		template <nefarius::utilities::string_type StringType>
 		std::expected<SERVICE_STATUS_PROCESS, nefarius::utilities::Win32Error> GetServiceStatus(
 			const StringType& ServiceName);
 	}

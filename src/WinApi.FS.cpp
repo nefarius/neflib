@@ -57,7 +57,7 @@ std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const st
 template
 std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const std::string& FilePath);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const StringType& FilePath)
 {
 	const std::wstring filePath = ConvertToWide(FilePath);
@@ -136,7 +136,7 @@ template
 std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::GetProductVersionFromFile(
 	const std::string& filePath);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::GetProductVersionFromFile(
 	const StringType& FilePath)
 {
@@ -165,7 +165,7 @@ template
 std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::
 GetFileVersionFromFile(const std::string& FilePath);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::
 GetFileVersionFromFile(const StringType& FilePath)
 {
