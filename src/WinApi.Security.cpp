@@ -1,4 +1,5 @@
 // ReSharper disable CppCStyleCast
+// ReSharper disable CppRedundantQualifier
 #include "pch.h"
 
 #include <nefarius/neflib/MiscWinApi.hpp>
@@ -124,14 +125,6 @@ std::expected<PSID, Win32Error> nefarius::winapi::security::GetLogonSID(HANDLE h
 
 	return std::unexpected(Win32Error(ERROR_NOT_FOUND));
 }
-
-template
-std::expected<void, Win32Error> nefarius::winapi::security::SetPrivilege(
-	const std::wstring& Privilege, int Enable, HANDLE Process);
-
-template
-std::expected<void, Win32Error> nefarius::winapi::security::SetPrivilege(
-	const std::string& Privilege, int Enable, HANDLE Process);
 
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::winapi::security::SetPrivilege(

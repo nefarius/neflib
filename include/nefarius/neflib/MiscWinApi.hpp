@@ -25,6 +25,14 @@ namespace nefarius::winapi
 		template <nefarius::utilities::string_type StringType>
 		std::expected<void, nefarius::utilities::Win32Error> SetPrivilege(
 			const StringType& Privilege, int Enable, HANDLE Process = GetCurrentProcess());
+
+		template
+		std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::security::SetPrivilege(
+			const std::wstring& Privilege, int Enable, HANDLE Process);
+
+		template
+		std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::security::SetPrivilege(
+			const std::string& Privilege, int Enable, HANDLE Process);
 	}
 
 	namespace fs
@@ -58,25 +66,59 @@ namespace nefarius::winapi
 		template <nefarius::utilities::string_type StringType>
 		std::expected<void, nefarius::utilities::Win32Error> TakeFileOwnership(const StringType& FilePath);
 
+		template
+		std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::TakeFileOwnership(
+			const std::wstring& FilePath);
+
+		template
+		std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::TakeFileOwnership(
+			const std::string& FilePath);
+
 		template <nefarius::utilities::string_type StringType>
 		std::expected<Version, nefarius::utilities::Win32Error> GetProductVersionFromFile(const StringType& FilePath);
+
+		template
+		std::expected<nefarius::winapi::fs::Version, nefarius::utilities::Win32Error>
+		nefarius::winapi::fs::GetProductVersionFromFile(
+			const std::wstring& filePath);
+
+		template
+		std::expected<nefarius::winapi::fs::Version, nefarius::utilities::Win32Error>
+		nefarius::winapi::fs::GetProductVersionFromFile(
+			const std::string& filePath);
 
 		template <nefarius::utilities::string_type StringType>
 		std::expected<Version, nefarius::utilities::Win32Error> GetFileVersionFromFile(const StringType& FilePath);
 
 		template
-		std::expected<nefarius::winapi::fs::Version, utilities::Win32Error> nefarius::winapi::fs::
+		std::expected<nefarius::winapi::fs::Version, nefarius::utilities::Win32Error> nefarius::winapi::fs::
 		GetFileVersionFromFile(const std::wstring& FilePath);
 
 		template
-		std::expected<nefarius::winapi::fs::Version, utilities::Win32Error> nefarius::winapi::fs::
+		std::expected<nefarius::winapi::fs::Version, nefarius::utilities::Win32Error> nefarius::winapi::fs::
 		GetFileVersionFromFile(const std::string& FilePath);
 
 		template <nefarius::utilities::string_type StringType>
 		std::expected<bool, nefarius::utilities::Win32Error> DirectoryExists(const StringType& Path);
 
+		template
+		std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryExists(
+			const std::wstring& Path);
+
+		template
+		std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryExists(
+			const std::string& Path);
+
 		template <nefarius::utilities::string_type StringType>
 		std::expected<void, nefarius::utilities::Win32Error> DirectoryCreate(const StringType& Path);
+
+		template
+		std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryCreate(
+			const std::wstring& Path);
+
+		template
+		std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryCreate(
+			const std::string& Path);
 	}
 
 	namespace services

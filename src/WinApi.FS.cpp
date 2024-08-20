@@ -1,4 +1,5 @@
 // ReSharper disable CppCStyleCast
+// ReSharper disable CppRedundantQualifier
 #include "pch.h"
 
 #include <nefarius/neflib/MiscWinApi.hpp>
@@ -50,12 +51,6 @@ namespace
 		return verInfo;
 	}
 }
-
-template
-std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const std::wstring& FilePath);
-
-template
-std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const std::string& FilePath);
 
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const StringType& FilePath)
@@ -128,14 +123,6 @@ std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const St
 	return {};
 }
 
-template
-std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::GetProductVersionFromFile(
-	const std::wstring& filePath);
-
-template
-std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::GetProductVersionFromFile(
-	const std::string& filePath);
-
 template <nefarius::utilities::string_type StringType>
 std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::GetProductVersionFromFile(
 	const StringType& FilePath)
@@ -178,12 +165,6 @@ GetFileVersionFromFile(const StringType& FilePath)
 	};
 }
 
-template
-std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryExists(const std::wstring& Path);
-
-template
-std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryExists(const std::string& Path);
-
 template <nefarius::utilities::string_type StringType>
 std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryExists(const StringType& Path)
 {
@@ -202,12 +183,6 @@ std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::fs::Direc
 
 	return false;
 }
-
-template
-std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryCreate(const std::wstring& Path);
-
-template
-std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryCreate(const std::string& Path);
 
 template <nefarius::utilities::string_type StringType>
 std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryCreate(const StringType& Path)
