@@ -1,5 +1,6 @@
 // ReSharper disable CppClangTidyModernizeUseEmplace
 // ReSharper disable CppCStyleCast
+// ReSharper disable CppRedundantQualifier
 #include "pch.h"
 
 #include <nefarius/neflib/Devcon.hpp>
@@ -320,15 +321,6 @@ namespace
 	}
 }
 
-
-template
-std::expected<void, Win32Error> nefarius::devcon::Create(const std::wstring& ClassName, const GUID* ClassGuid,
-                                                         const WideMultiStringArray& HardwareId);
-
-template
-std::expected<void, Win32Error> nefarius::devcon::Create(const std::string& ClassName, const GUID* ClassGuid,
-                                                         const WideMultiStringArray& HardwareId);
-
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::Create(const StringType& ClassName, const GUID* ClassGuid,
                                                          const WideMultiStringArray& HardwareId)
@@ -390,16 +382,6 @@ std::expected<void, Win32Error> nefarius::devcon::Create(const StringType& Class
 	return {};
 }
 
-template
-std::expected<void, Win32Error> nefarius::devcon::Update(const std::wstring& HardwareId,
-                                                         const std::wstring& FullInfPath,
-                                                         bool* RebootRequired, bool Force);
-
-template
-std::expected<void, Win32Error> nefarius::devcon::Update(const std::string& HardwareId,
-                                                         const std::string& FullInfPath,
-                                                         bool* RebootRequired, bool Force);
-
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::Update(const StringType& HardwareId,
                                                          const StringType& FullInfPath,
@@ -445,14 +427,6 @@ std::expected<void, Win32Error> nefarius::devcon::Update(const StringType& Hardw
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
 
-template
-std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const std::wstring& FullInfPath,
-                                                                bool* RebootRequired);
-
-template
-std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const std::string& FullInfPath,
-                                                                bool* RebootRequired);
-
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const StringType& FullInfPath,
                                                                 bool* RebootRequired)
@@ -491,14 +465,6 @@ std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const StringType
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
 
-template
-std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const std::wstring& FullInfPath,
-                                                                  bool* RebootRequired);
-
-template
-std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const std::string& FullInfPath,
-                                                                  bool* RebootRequired);
-
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const StringType& FullInfPath,
                                                                   bool* RebootRequired)
@@ -536,14 +502,6 @@ std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const StringTy
 
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
-
-template
-std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAndDriver(
-	const GUID* ClassGuid, const std::wstring& HardwareId, bool* RebootRequired);
-
-template
-std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAndDriver(
-	const GUID* ClassGuid, const std::string& HardwareId, bool* RebootRequired);
 
 template <nefarius::utilities::string_type StringType>
 std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAndDriver(
@@ -607,14 +565,6 @@ std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAn
 
 	return results;
 }
-
-template
-std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
-	const std::wstring& FullInfPath, bool* RebootRequired);
-
-template
-std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
-	const std::string& FullInfPath, bool* RebootRequired);
 
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
@@ -759,14 +709,6 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
 
-template
-std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std::wstring& FullInfPath,
-                                                                      bool* RebootRequired);
-
-template
-std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std::string& FullInfPath,
-                                                                      bool* RebootRequired);
-
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const StringType& FullInfPath,
                                                                       bool* RebootRequired)
@@ -855,14 +797,6 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const Stri
 
 	return std::unexpected(Win32Error(ERROR_SECTION_NOT_FOUND));
 }
-
-template
-std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefarius::devcon::FindByHwId(
-	const std::wstring& Matchstring);
-
-template
-std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefarius::devcon::FindByHwId(
-	const std::string& Matchstring);
 
 template <nefarius::utilities::string_type StringType>
 std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefarius::devcon::FindByHwId(

@@ -44,6 +44,16 @@ namespace nefarius::devcon
 	                                                            const nefarius::utilities::WideMultiStringArray&
 	                                                            HardwareId);
 
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::Create(
+		const std::wstring& ClassName, const GUID* ClassGuid,
+		const nefarius::utilities::WideMultiStringArray& HardwareId);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::Create(
+		const std::string& ClassName, const GUID* ClassGuid,
+		const nefarius::utilities::WideMultiStringArray& HardwareId);
+
 	/**
 	 * Triggers a driver update on all devices matching a given hardware ID with using the provided INF.
 	 *
@@ -62,6 +72,16 @@ namespace nefarius::devcon
 	                                                            const StringType& FullInfPath, bool* RebootRequired,
 	                                                            bool Force = false);
 
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::Update(const std::wstring& HardwareId,
+		const std::wstring& FullInfPath,
+		bool* RebootRequired, bool Force);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::Update(const std::string& HardwareId,
+		const std::string& FullInfPath,
+		bool* RebootRequired, bool Force);
+
 	/**
      * Installs a given driver into the driver store.
      *
@@ -77,6 +97,15 @@ namespace nefarius::devcon
 	std::expected<void, nefarius::utilities::Win32Error> InstallDriver(const StringType& FullInfPath,
 	                                                                   bool* RebootRequired);
 
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::InstallDriver(
+		const std::wstring& FullInfPath,
+		bool* RebootRequired);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::InstallDriver(const std::string& FullInfPath,
+		bool* RebootRequired);
+
 	/**
 	 * Uninstalls a given driver.
 	 *
@@ -91,6 +120,16 @@ namespace nefarius::devcon
 	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> UninstallDriver(const StringType& FullInfPath,
 	                                                                     bool* RebootRequired);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::UninstallDriver(
+		const std::wstring& FullInfPath,
+		bool* RebootRequired);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::UninstallDriver(
+		const std::string& FullInfPath,
+		bool* RebootRequired);
 
 	/**
 	 * Uninstalls all devices and active function driver matched by provided device class and
@@ -109,6 +148,14 @@ namespace nefarius::devcon
 	std::vector<std::expected<void, nefarius::utilities::Win32Error>> UninstallDeviceAndDriver(
 		const GUID* ClassGuid, const StringType& HardwareId, bool* RebootRequired);
 
+	template
+	std::vector<std::expected<void, nefarius::utilities::Win32Error>> nefarius::devcon::UninstallDeviceAndDriver(
+		const GUID* ClassGuid, const std::wstring& HardwareId, bool* RebootRequired);
+
+	template
+	std::vector<std::expected<void, nefarius::utilities::Win32Error>> nefarius::devcon::UninstallDeviceAndDriver(
+		const GUID* ClassGuid, const std::string& HardwareId, bool* RebootRequired);
+
 	/**
 	 * Installs a primitive driver.
 	 *
@@ -123,6 +170,14 @@ namespace nefarius::devcon
 	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> InfDefaultInstall(const StringType& FullInfPath,
 	                                                                       bool* RebootRequired);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::InfDefaultInstall(
+		const std::wstring& FullInfPath, bool* RebootRequired);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::InfDefaultInstall(
+		const std::string& FullInfPath, bool* RebootRequired);
 
 	/**
 	 * Uninstalls a primitive driver.
@@ -139,6 +194,16 @@ namespace nefarius::devcon
 	std::expected<void, nefarius::utilities::Win32Error> InfDefaultUninstall(
 		const StringType& FullInfPath, bool* RebootRequired);
 
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::InfDefaultUninstall(
+		const std::wstring& FullInfPath,
+		bool* RebootRequired);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::InfDefaultUninstall(
+		const std::string& FullInfPath,
+		bool* RebootRequired);
+
 	/**
 	 * Searches for devices matched by Hardware ID and returns a list of Hardware IDs, friendly
 	 * names and driver version information.
@@ -153,6 +218,16 @@ namespace nefarius::devcon
 	template <nefarius::utilities::string_type StringType>
 	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error> FindByHwId(
 		const StringType& Matchstring);
+
+	template
+	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error>
+	nefarius::devcon::FindByHwId(
+		const std::wstring& Matchstring);
+
+	template
+	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error>
+	nefarius::devcon::FindByHwId(
+		const std::string& Matchstring);
 
 	namespace bluetooth
 	{
