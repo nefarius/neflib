@@ -25,13 +25,43 @@ namespace nefarius::devcon
 	                                                                          const StringType& FilterName,
 	                                                                          DeviceClassFilterPosition Position);
 
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUID* ClassGuid,
+		const std::wstring& FilterName,
+		DeviceClassFilterPosition Position);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUID* ClassGuid,
+		const std::string& FilterName,
+		DeviceClassFilterPosition Position);
+
 	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> RemoveDeviceClassFilter(const GUID* ClassGuid,
 		const StringType& FilterName,
+		DeviceClassFilterPosition Position);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
+		const GUID* ClassGuid, const std::wstring& FilterName,
+		DeviceClassFilterPosition Position);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
+		const GUID* ClassGuid, const std::string& FilterName,
 		DeviceClassFilterPosition Position);
 
 	template <nefarius::utilities::string_type StringType>
 	std::expected<bool, nefarius::utilities::Win32Error> HasDeviceClassFilter(const GUID* ClassGuid,
 	                                                                          const StringType& FilterName,
 	                                                                          DeviceClassFilterPosition Position);
+
+	template
+	std::expected<bool, nefarius::utilities::Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* ClassGuid,
+		const std::wstring& FilterName,
+		DeviceClassFilterPosition Position);
+
+	template
+	std::expected<bool, nefarius::utilities::Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* ClassGuid,
+		const std::string& FilterName,
+		DeviceClassFilterPosition Position);
 }

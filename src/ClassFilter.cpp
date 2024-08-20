@@ -1,3 +1,4 @@
+// ReSharper disable CppRedundantQualifier
 #include "pch.h"
 
 using namespace nefarius::utilities::guards;
@@ -45,16 +46,6 @@ namespace
 		return multiString;
 	}
 }
-
-template
-std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUID* ClassGuid,
-                                                                       const std::wstring& FilterName,
-                                                                       DeviceClassFilterPosition Position);
-
-template
-std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUID* ClassGuid,
-                                                                       const std::string& FilterName,
-                                                                       DeviceClassFilterPosition Position);
 
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUID* ClassGuid,
@@ -172,16 +163,6 @@ std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUI
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
 
-template
-std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
-	const GUID* ClassGuid, const std::wstring& FilterName,
-	DeviceClassFilterPosition Position);
-
-template
-std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
-	const GUID* ClassGuid, const std::string& FilterName,
-	DeviceClassFilterPosition Position);
-
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
 	const GUID* ClassGuid, const StringType& FilterName,
@@ -275,16 +256,6 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
 
 	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 }
-
-template
-std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* ClassGuid,
-                                                                       const std::wstring& FilterName,
-                                                                       DeviceClassFilterPosition Position);
-
-template
-std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* ClassGuid,
-                                                                       const std::string& FilterName,
-                                                                       DeviceClassFilterPosition Position);
 
 template <nefarius::utilities::string_type StringType>
 std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* ClassGuid,
