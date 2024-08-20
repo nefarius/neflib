@@ -64,6 +64,14 @@ namespace nefarius::winapi
 		template <nefarius::utilities::string_type StringType>
 		std::expected<Version, nefarius::utilities::Win32Error> GetFileVersionFromFile(const StringType& FilePath);
 
+		template
+		std::expected<nefarius::winapi::fs::Version, utilities::Win32Error> nefarius::winapi::fs::
+		GetFileVersionFromFile(const std::wstring& FilePath);
+
+		template
+		std::expected<nefarius::winapi::fs::Version, utilities::Win32Error> nefarius::winapi::fs::
+		GetFileVersionFromFile(const std::string& FilePath);
+
 		template <nefarius::utilities::string_type StringType>
 		std::expected<bool, nefarius::utilities::Win32Error> DirectoryExists(const StringType& Path);
 

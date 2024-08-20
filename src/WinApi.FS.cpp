@@ -157,14 +157,6 @@ std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::G
 	};
 }
 
-template
-std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::
-GetFileVersionFromFile(const std::wstring& FilePath);
-
-template
-std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::
-GetFileVersionFromFile(const std::string& FilePath);
-
 template <nefarius::utilities::string_type StringType>
 std::expected<nefarius::winapi::fs::Version, Win32Error> nefarius::winapi::fs::
 GetFileVersionFromFile(const StringType& FilePath)
