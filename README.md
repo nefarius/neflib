@@ -5,6 +5,8 @@
 
 My opinionated collection of C++ utilities.
 
+## About
+
 Work in progress 🔥 Consider this as "stable to use" but "no stable API" since I am still experimenting and changing things frequently. The version "1.0.0" of the package will be frequently available under new commit hashes until it stabilizes. You have been warned, have fun exploring!
 
 ## How to use
