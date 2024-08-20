@@ -1,7 +1,7 @@
 // ReSharper disable CppRedundantQualifier
 #pragma once
 
-
+#include <nefarius/neflib/AnyString.hpp>
 #include <nefarius/neflib/Win32Error.hpp>
 #include <nefarius/neflib/MultiStringArray.hpp>
 
@@ -39,7 +39,7 @@ namespace nefarius::devcon
 	 *
 	 * @returns	A std::expected&lt;void,nefarius::util::Win32Error&gt;
 	 */
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> Create(const StringType& ClassName, const GUID* ClassGuid,
 	                                                            const nefarius::utilities::WideMultiStringArray&
 	                                                            HardwareId);
@@ -57,7 +57,7 @@ namespace nefarius::devcon
 	 *
 	 * @returns	A std::expected&lt;void,nefarius::util::Win32Error&gt;
 	 */
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> Update(const StringType& HardwareId,
 	                                                            const StringType& FullInfPath, bool* RebootRequired,
 	                                                            bool Force = false);
@@ -73,7 +73,7 @@ namespace nefarius::devcon
      *
      * @returns	A std::expected&lt;void,nefarius::util::Win32Error&gt;
      */
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> InstallDriver(const StringType& FullInfPath,
 	                                                                   bool* RebootRequired);
 
@@ -88,7 +88,7 @@ namespace nefarius::devcon
 	 *
 	 * @returns	A std::expected&lt;void,nefarius::util::Win32Error&gt;
 	 */
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> UninstallDriver(const StringType& FullInfPath,
 	                                                                     bool* RebootRequired);
 
@@ -105,7 +105,7 @@ namespace nefarius::devcon
 	 *
 	 * @returns	A std::vector&lt;std::expected&lt;void,nefarius::utilities::Win32Error&gt;&gt;
 	 */
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::vector<std::expected<void, nefarius::utilities::Win32Error>> UninstallDeviceAndDriver(
 		const GUID* ClassGuid, const StringType& HardwareId, bool* RebootRequired);
 
@@ -120,7 +120,7 @@ namespace nefarius::devcon
 	 *
 	 * @returns	A std::expected&lt;void,nefarius::utilities::Win32Error&gt;
 	 */
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> InfDefaultInstall(const StringType& FullInfPath,
 	                                                                       bool* RebootRequired);
 
@@ -135,7 +135,7 @@ namespace nefarius::devcon
 	 *
 	 * @returns	A std::expected&lt;void,nefarius::utilities::Win32Error&gt;
 	 */
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> InfDefaultUninstall(
 		const StringType& FullInfPath, bool* RebootRequired);
 
@@ -150,7 +150,7 @@ namespace nefarius::devcon
 	 *
 	 * @returns	True if at least one match was found, false otherwise.
 	 */
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, nefarius::utilities::Win32Error> FindByHwId(
 		const StringType& Matchstring);
 

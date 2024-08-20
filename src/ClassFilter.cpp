@@ -56,7 +56,7 @@ std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUI
                                                                        const std::string& FilterName,
                                                                        DeviceClassFilterPosition Position);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUID* ClassGuid,
                                                                        const StringType& FilterName,
                                                                        DeviceClassFilterPosition Position)
@@ -182,7 +182,7 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
 	const GUID* ClassGuid, const std::string& FilterName,
 	DeviceClassFilterPosition Position);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
 	const GUID* ClassGuid, const StringType& FilterName,
 	DeviceClassFilterPosition Position)
@@ -286,7 +286,7 @@ std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUI
                                                                        const std::string& FilterName,
                                                                        DeviceClassFilterPosition Position);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUID* ClassGuid,
                                                                        const StringType& FilterName,
                                                                        DeviceClassFilterPosition Position)

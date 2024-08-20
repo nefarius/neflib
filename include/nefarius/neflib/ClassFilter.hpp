@@ -1,7 +1,7 @@
 // ReSharper disable CppRedundantQualifier
 #pragma once
 
-
+#include <nefarius/neflib/AnyString.hpp>
 #include <nefarius/neflib/Win32Error.hpp>
 
 namespace nefarius::devcon
@@ -20,17 +20,17 @@ namespace nefarius::devcon
 		Lower
 	};
 
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> AddDeviceClassFilter(const GUID* ClassGuid,
 	                                                                          const StringType& FilterName,
 	                                                                          DeviceClassFilterPosition Position);
 
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<void, nefarius::utilities::Win32Error> RemoveDeviceClassFilter(const GUID* ClassGuid,
 		const StringType& FilterName,
 		DeviceClassFilterPosition Position);
 
-	template <typename StringType>
+	template <nefarius::utilities::string_type StringType>
 	std::expected<bool, nefarius::utilities::Win32Error> HasDeviceClassFilter(const GUID* ClassGuid,
 	                                                                          const StringType& FilterName,
 	                                                                          DeviceClassFilterPosition Position);

@@ -329,7 +329,7 @@ template
 std::expected<void, Win32Error> nefarius::devcon::Create(const std::string& ClassName, const GUID* ClassGuid,
                                                          const WideMultiStringArray& HardwareId);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::Create(const StringType& ClassName, const GUID* ClassGuid,
                                                          const WideMultiStringArray& HardwareId)
 {
@@ -400,7 +400,7 @@ std::expected<void, Win32Error> nefarius::devcon::Update(const std::string& Hard
                                                          const std::string& FullInfPath,
                                                          bool* RebootRequired, bool Force);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::Update(const StringType& HardwareId,
                                                          const StringType& FullInfPath,
                                                          bool* RebootRequired, bool Force)
@@ -453,7 +453,7 @@ template
 std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const std::string& FullInfPath,
                                                                 bool* RebootRequired);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const StringType& FullInfPath,
                                                                 bool* RebootRequired)
 {
@@ -499,7 +499,7 @@ template
 std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const std::string& FullInfPath,
                                                                   bool* RebootRequired);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const StringType& FullInfPath,
                                                                   bool* RebootRequired)
 {
@@ -545,7 +545,7 @@ template
 std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAndDriver(
 	const GUID* ClassGuid, const std::string& HardwareId, bool* RebootRequired);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAndDriver(
 	const GUID* ClassGuid, const StringType& HardwareId, bool* RebootRequired)
 {
@@ -616,7 +616,7 @@ template
 std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 	const std::string& FullInfPath, bool* RebootRequired);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 	const StringType& FullInfPath, bool* RebootRequired)
 {
@@ -767,7 +767,7 @@ template
 std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const std::string& FullInfPath,
                                                                       bool* RebootRequired);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const StringType& FullInfPath,
                                                                       bool* RebootRequired)
 {
@@ -864,7 +864,7 @@ template
 std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefarius::devcon::FindByHwId(
 	const std::string& Matchstring);
 
-template <typename StringType>
+template <nefarius::utilities::string_type StringType>
 std::expected<std::vector<nefarius::devcon::FindByHwIdResult>, Win32Error> nefarius::devcon::FindByHwId(
 	const StringType& Matchstring)
 {
