@@ -62,6 +62,9 @@ namespace nefarius::winapi
 
 		template <nefarius::utilities::string_type StringType>
 		std::expected<Version, nefarius::utilities::Win32Error> GetFileVersionFromFile(const StringType& FilePath);
+
+		template <nefarius::utilities::string_type StringType>
+		std::expected<bool, nefarius::utilities::Win32Error> DirectoryExists(const StringType& Path);
 	}
 
 	namespace services

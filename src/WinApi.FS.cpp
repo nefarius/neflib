@@ -185,3 +185,28 @@ GetFileVersionFromFile(const StringType& FilePath)
 		LOWORD(version->dwFileVersionLS)
 	};
 }
+
+template
+std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryExists(const std::wstring& Path);
+
+template
+std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryExists(const std::string& Path);
+
+template <nefarius::utilities::string_type StringType>
+std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryExists(const StringType& Path)
+{
+	const std::wstring dirName = nefarius::utilities::ConvertToWide(Path);
+	const DWORD type = GetFileAttributesW(dirName.c_str());
+
+	if (type == INVALID_FILE_ATTRIBUTES)
+	{
+		return std::unexpected(Win32Error("GetFileAttributesW"));
+	}
+
+	if (type & FILE_ATTRIBUTE_DIRECTORY)
+	{
+		return true;
+	}
+
+	return false;
+}
