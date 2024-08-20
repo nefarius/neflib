@@ -28,6 +28,14 @@ namespace nefarius::devcon
 		} Version;
 	};
 
+	template <nefarius::utilities::string_type StringType>
+	struct INFClassResult
+	{
+		GUID ClassGUID;
+
+		StringType ClassName;
+	};
+
 	/**
 	 * Creates a new root-enumerated device node for a driver to load on to.
 	 *
@@ -230,6 +238,18 @@ namespace nefarius::devcon
 	std::expected<std::vector<nefarius::devcon::FindByHwIdResult<std::string>>, nefarius::utilities::Win32Error>
 	nefarius::devcon::FindByHwId(
 		const std::string& Matchstring);
+
+	template <nefarius::utilities::string_type StringType>
+	std::expected<nefarius::devcon::INFClassResult<StringType>, nefarius::utilities::Win32Error>
+	GetINFClass(const StringType& InfPath);
+
+	template
+	std::expected<nefarius::devcon::INFClassResult<std::wstring>, nefarius::utilities::Win32Error>
+	GetINFClass(const std::wstring& InfPath);
+
+	template
+	std::expected<nefarius::devcon::INFClassResult<std::string>, nefarius::utilities::Win32Error>
+	GetINFClass(const std::string& InfPath);
 
 	namespace bluetooth
 	{

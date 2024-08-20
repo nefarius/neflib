@@ -77,6 +77,7 @@ My philosophy is having my code stay out of your project structures' and prefere
 #include <devguid.h>
 #include <shellapi.h>
 #include <TlHelp32.h>
+#include <cfgmgr32.h>
 
 //
 // Include consumed STL

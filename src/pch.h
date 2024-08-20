@@ -14,6 +14,7 @@
 #include <devguid.h>
 #include <shellapi.h>
 #include <TlHelp32.h>
+#include <cfgmgr32.h>
 
 //
 // Include consumed STL

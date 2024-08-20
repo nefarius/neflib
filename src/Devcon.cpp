@@ -949,6 +949,43 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult<StringType>>, Win32
 	return results;
 }
 
+template <nefarius::utilities::string_type StringType>
+std::expected<nefarius::devcon::INFClassResult<StringType>, nefarius::utilities::Win32Error> nefarius::
+devcon::GetINFClass(const StringType& InfPath)
+{
+	const std::wstring fullInfPath = ConvertToWide(InfPath);
+
+	WCHAR normalisedInfPath[MAX_PATH] = {};
+
+	const auto ret = GetFullPathNameW(fullInfPath.c_str(), MAX_PATH, normalisedInfPath, NULL);
+
+	if ((ret >= MAX_PATH) || (ret == FALSE))
+	{
+		return std::unexpected(Win32Error(ERROR_BAD_PATHNAME));
+	}
+
+	GUID classGuid = {};
+	std::wstring className(MAX_CLASS_NAME_LEN, L'\0');
+
+	if (!SetupDiGetINFClassW(normalisedInfPath, &classGuid, className.data(), (DWORD)className.size(), NULL))
+	{
+		return std::unexpected(Win32Error("SetupDiGetINFClassW"));
+	}
+
+	StripNullCharacters(className);
+
+	if constexpr (std::is_same_v<StringType, std::wstring>)
+	{
+		return INFClassResult<StringType>{classGuid, className};
+	}
+	else if constexpr (std::is_same_v<StringType, std::string>)
+	{
+		return INFClassResult<StringType>{classGuid, ConvertToNarrow(className)};
+	}
+
+	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
+}
+
 std::expected<void, Win32Error> nefarius::devcon::bluetooth::RestartBthUsbDevice(int instance)
 {
 	bool found = false;
