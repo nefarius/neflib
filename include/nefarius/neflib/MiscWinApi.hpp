@@ -3,6 +3,7 @@
 #pragma once
 
 #include <nefarius/neflib/AnyString.hpp>
+#include <nefarius/neflib/UniUtil.hpp>
 #include <nefarius/neflib/Win32Error.hpp>
 
 namespace nefarius::winapi
