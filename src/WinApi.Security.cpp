@@ -125,28 +125,39 @@ std::expected<PSID, Win32Error> nefarius::winapi::security::GetLogonSID(HANDLE h
 	return std::unexpected(Win32Error(ERROR_NOT_FOUND));
 }
 
+template
 std::expected<void, Win32Error> nefarius::winapi::security::SetPrivilege(
-	LPCWSTR privilege, int enable, HANDLE process)
+	const std::wstring& Privilege, int Enable, HANDLE Process);
+
+template
+std::expected<void, Win32Error> nefarius::winapi::security::SetPrivilege(
+	const std::string& Privilege, int Enable, HANDLE Process);
+
+template <nefarius::utilities::string_type StringType>
+std::expected<void, Win32Error> nefarius::winapi::security::SetPrivilege(
+	const StringType& Privilege, int Enable, HANDLE Process)
 {
+	const std::wstring privilege = ConvertToWide(Privilege);
+
 	TOKEN_PRIVILEGES tp;
 	LUID luid;
 	HANDLE token;
 
-	if (!OpenProcessToken(process, TOKEN_ADJUST_PRIVILEGES, &token))
+	if (!OpenProcessToken(Process, TOKEN_ADJUST_PRIVILEGES, &token))
 	{
 		return std::unexpected(Win32Error("OpenProcessToken"));
 	}
 
 	SCOPE_GUARD_CAPTURE({ CloseHandle(token); }, token);
 
-	if (!LookupPrivilegeValue(nullptr, privilege, &luid))
+	if (!LookupPrivilegeValueW(nullptr, privilege.c_str(), &luid))
 	{
-		return std::unexpected(Win32Error("LookupPrivilegeValue"));
+		return std::unexpected(Win32Error("LookupPrivilegeValueW"));
 	}
 
 	tp.PrivilegeCount = 1;
 	tp.Privileges[0].Luid = luid;
-	tp.Privileges[0].Attributes = enable ? SE_PRIVILEGE_ENABLED : FALSE;
+	tp.Privileges[0].Attributes = Enable ? SE_PRIVILEGE_ENABLED : FALSE;
 
 	// Enable the privilege or disable all privileges.
 	if (!AdjustTokenPrivileges(token, 0, &tp, NULL, nullptr, nullptr))

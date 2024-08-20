@@ -21,8 +21,9 @@ namespace nefarius::winapi
 
 		std::expected<PSID, nefarius::utilities::Win32Error> GetLogonSID(HANDLE hToken);
 
+		template <nefarius::utilities::string_type StringType>
 		std::expected<void, nefarius::utilities::Win32Error> SetPrivilege(
-			LPCWSTR privilege, int enable, HANDLE process = GetCurrentProcess());
+			const StringType& Privilege, int Enable, HANDLE Process = GetCurrentProcess());
 	}
 
 	namespace fs

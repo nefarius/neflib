@@ -72,19 +72,19 @@ std::expected<void, Win32Error> nefarius::winapi::fs::TakeFileOwnership(const St
 		return std::unexpected(Win32Error("OpenProcessToken"));
 	}
 
-	if (auto ret = security::SetPrivilege(L"SeTakeOwnershipPrivilege", TRUE); !ret)
+	if (auto ret = security::SetPrivilege(std::wstring(L"SeTakeOwnershipPrivilege"), TRUE); !ret)
 	{
 		return ret;
 	}
-	if (auto ret = security::SetPrivilege(L"SeSecurityPrivilege", TRUE); !ret)
+	if (auto ret = security::SetPrivilege(std::wstring(L"SeSecurityPrivilege"), TRUE); !ret)
 	{
 		return ret;
 	}
-	if (auto ret = security::SetPrivilege(L"SeBackupPrivilege", TRUE); !ret)
+	if (auto ret = security::SetPrivilege(std::wstring(L"SeBackupPrivilege"), TRUE); !ret)
 	{
 		return ret;
 	}
-	if (auto ret = security::SetPrivilege(L"SeRestorePrivilege", TRUE); !ret)
+	if (auto ret = security::SetPrivilege(std::wstring(L"SeRestorePrivilege"), TRUE); !ret)
 	{
 		return ret;
 	}
