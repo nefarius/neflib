@@ -210,3 +210,29 @@ std::expected<bool, nefarius::utilities::Win32Error> nefarius::winapi::fs::Direc
 
 	return false;
 }
+
+template
+std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryCreate(const std::wstring& Path);
+
+template
+std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryCreate(const std::string& Path);
+
+template <nefarius::utilities::string_type StringType>
+std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::fs::DirectoryCreate(const StringType& Path)
+{
+	if (DirectoryExists(Path))
+	{
+		return {};
+	}
+
+	const std::wstring dirName = ConvertToWide(Path);
+
+	const DWORD ret = SHCreateDirectoryExW(nullptr, dirName.c_str(), nullptr);
+
+	if (ret == ERROR_SUCCESS)
+	{
+		return {};
+	}
+
+	return std::unexpected(Win32Error(ret, "SHCreateDirectoryExW"));
+}

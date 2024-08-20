@@ -65,6 +65,9 @@ namespace nefarius::winapi
 
 		template <nefarius::utilities::string_type StringType>
 		std::expected<bool, nefarius::utilities::Win32Error> DirectoryExists(const StringType& Path);
+
+		template <nefarius::utilities::string_type StringType>
+		std::expected<void, nefarius::utilities::Win32Error> DirectoryCreate(const StringType& Path);
 	}
 
 	namespace services
