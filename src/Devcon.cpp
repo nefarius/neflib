@@ -647,8 +647,6 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 
 		InstallHinfSectionW(nullptr, nullptr, pszDest, 0);
 
-		const DWORD postInstallError = GetLastError();
-
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
 		DetourDetach((void**)&real_MessageBoxW, DetourMessageBoxW); // NOLINT(clang-diagnostic-microsoft-cast)
