@@ -698,7 +698,7 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 	case FunctionCallResult::NotAvailable:
 		return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION));
 	case FunctionCallResult::Failure:
-		return std::unexpected(Win32Error());
+		return std::unexpected(Win32Error("fpDiInstallDriverW"));
 	case FunctionCallResult::Success:
 		if (RebootRequired)
 		{
