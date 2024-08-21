@@ -647,6 +647,8 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 
 		InstallHinfSectionW(nullptr, nullptr, pszDest, 0);
 
+		DWORD win32Error = GetLastError();
+
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
 		DetourDetach((void**)&real_MessageBoxW, DetourMessageBoxW); // NOLINT(clang-diagnostic-microsoft-cast)
@@ -659,7 +661,7 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 		if (g_MbCalled)
 		{
 			g_MbCalled = FALSE;
-			return std::unexpected(Win32Error(ERROR_PNP_REBOOT_REQUIRED, "InstallHinfSectionW"));
+			return std::unexpected(Win32Error(win32Error, "InstallHinfSectionW"));
 		}
 	}
 
