@@ -120,3 +120,4 @@ This approach is also compatible with the (optional) use of precompiled headers 
 - [Windows Implementation Library](https://github.com/microsoft/wil)
 - [Microsoft Research Detours Package](https://github.com/microsoft/Detours)
 - [A modern C++ scope guard that is easy to use but hard to misuse](https://github.com/ricab/scope_guard)
+- @fredemmott bullying me into the use of C++23 😛
