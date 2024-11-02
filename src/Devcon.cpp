@@ -547,7 +547,7 @@ std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAn
 		//
 		// find device matching hardware ID
 		// 
-		for (LPWSTR p = buffer; p && *p && (p < &buffer[hwIdBuffer.value().Length]); p += lstrlenW(p) + sizeof(TCHAR))
+		for (LPWSTR p = buffer; p && *p && (p < &buffer[hwIdBuffer.value().Length]); p += lstrlenW(p) + 1)
 		{
 			if (wstristr(p, hardwareId.c_str()))
 			{
@@ -559,8 +559,6 @@ std::vector<std::expected<void, Win32Error>> nefarius::devcon::UninstallDeviceAn
 				break;
 			}
 		}
-
-		LocalFree(buffer);
 	}
 
 	return results;
