@@ -23,13 +23,14 @@ To grab and built it automatically via package manager first create a `vcpkg-con
     {
       "kind": "git",
       "repository": "https://github.com/nefarius/nefarius-vcpkg-registry.git",
-      "baseline": "f76f9c11cb39cf0f2ffbeb5bb11a655f28dc5ffc",
+      "baseline": "a51cec12849ac113d4b8436c80bcf0b989668f90",
       "packages": [ "neflib" ]
     }
   ],
   "default-registry": {
-    "kind": "builtin",
-    "baseline": "2024.07.12"
+    "kind": "git",
+    "repository": "https://github.com/microsoft/vcpkg",
+    "baseline": "3508985146f1b1d248c67ead13f8f54be5b4f5da"
   }
 }
 ```
@@ -112,7 +113,7 @@ My philosophy is having my code stay out of your project structures' and prefere
 #include <nefarius/neflib/MiscWinApi.hpp>
 ```
 
-This approach is also compatible with the use of precompiled headers, if you desire to use the feature. Optional, ofc. 😎
+This approach is also compatible with the (optional) use of precompiled headers 😎
 
 ## Sources and 3rd party credits
 
