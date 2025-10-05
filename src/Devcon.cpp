@@ -180,7 +180,7 @@ namespace
 				nullptr,
 				nullptr, 
 				0,
-				CM_REMOVE_NO_RESTART
+				0
 			);
 
 			if (cmRet != CR_SUCCESS)
