@@ -143,15 +143,57 @@ namespace
 			return std::unexpected(Win32Error("SetupDiBuildDriverInfoList"));
 		}
 
+		const auto driverGuard = sg::make_scope_guard([hDevInfo, spDevInfoData]() noexcept
+		{
+			//
+			// SetupDiBuildDriverInfoList allocated memory we need to explicitly free again
+			// 
+			SetupDiDestroyDriverInfoList(
+				hDevInfo,
+				spDevInfoData,
+				SPDIT_COMPATDRIVER
+			);
+		});
+
+		DWORD drvEnumLastError = ERROR_SUCCESS;
+
 		if (!SetupDiEnumDriverInfo(
 			hDevInfo,
 			spDevInfoData,
 			SPDIT_COMPATDRIVER,
 			0, // One result expected
 			&drvInfoData
-		))
+		) && (drvEnumLastError = GetLastError()) != ERROR_NO_MORE_ITEMS /* driver-less device */)
 		{
 			return std::unexpected(Win32Error("SetupDiEnumDriverInfo"));
+		}
+
+		//
+		// Device is missing driver, removal can be short-circuited
+		//
+		if (drvEnumLastError == ERROR_NO_MORE_ITEMS)
+		{
+			const DEVINST cmInst = spDevInfoData->DevInst;
+
+			const CONFIGRET cmRet = CM_Query_And_Remove_SubTree(
+				cmInst,
+				nullptr,
+				nullptr, 
+				0,
+				CM_REMOVE_NO_RESTART
+			);
+
+			if (cmRet != CR_SUCCESS)
+			{
+				const DWORD win32Err = CM_MapCrToWin32Err(cmRet, drvEnumLastError);
+
+				SetLastError(win32Err);
+
+				return std::unexpected(Win32Error(win32Err, "CM_Query_And_Remove_SubTree"));
+			}
+
+			// nothing more to do with this instance
+			return {};
 		}
 
 		//
@@ -212,18 +254,6 @@ namespace
 		{
 			return std::unexpected(Win32Error("SetupDiGetDriverInfoDetail"));
 		}
-
-		const auto driverGuard = sg::make_scope_guard([hDevInfo, spDevInfoData]() noexcept
-		{
-			//
-			// SetupDiGetDriverInfoDetail allocated memory we need to explicitly free again
-			// 
-			SetupDiDestroyDriverInfoList(
-				hDevInfo,
-				spDevInfoData,
-				SPDIT_COMPATDRIVER
-			);
-		});
 
 		//
 		// Remove device
