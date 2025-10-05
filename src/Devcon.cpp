@@ -872,6 +872,7 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult<StringType>>, Win32
 			);
 
 			LPWSTR nameBuffer = NULL;
+			LPCWSTR fallbackName = L"Unknown device";
 
 			//
 			// Try Device Description...
@@ -889,10 +890,12 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult<StringType>>, Win32
 
 				if (!nameProperty)
 				{
-					continue;
+					nameBuffer = (LPWSTR)fallbackName;
 				}
-
-				nameBuffer = (LPWSTR)nameProperty.value().Data.get();
+				else
+				{
+					nameBuffer = (LPWSTR)nameProperty.value().Data.get();
+				}				
 			}
 			else
 			{
@@ -901,9 +904,22 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult<StringType>>, Win32
 
 			const auto resultName = std::wstring(nameBuffer);
 
+			if constexpr (std::is_same_v<StringType, std::wstring>)
+			{
+				result.HardwareIds = entries;
+				result.Name = resultName;
+			}
+			else if constexpr (std::is_same_v<StringType, std::string>)
+			{
+				result.HardwareIds.reserve(entries.size());
+				std::transform(entries.begin(), entries.end(), result.HardwareIds.begin(), ConvertWideToANSI);
+				result.Name = ConvertToNarrow(resultName);
+			}
+
 			// Build a list of driver info items that we will retrieve below
 			if (!SetupDiBuildDriverInfoList(hDevInfo.get(), &spDevInfoData, SPDIT_COMPATDRIVER))
 			{
+				results.push_back(result);
 				continue;
 			}
 
@@ -922,20 +938,9 @@ std::expected<std::vector<nefarius::devcon::FindByHwIdResult<StringType>>, Win32
 
 			if (!SetupDiEnumDriverInfo(hDevInfo.get(), &spDevInfoData, SPDIT_COMPATDRIVER, 0, &drvInfo))
 			{
+				results.push_back(result);
 				continue;
-			}
-
-			if constexpr (std::is_same_v<StringType, std::wstring>)
-			{
-				result.HardwareIds = entries;
-				result.Name = resultName;
-			}
-			else if constexpr (std::is_same_v<StringType, std::string>)
-			{
-				result.HardwareIds.reserve(entries.size());
-				std::transform(entries.begin(), entries.end(), result.HardwareIds.begin(), ConvertWideToANSI);
-				result.Name = ConvertToNarrow(resultName);
-			}
+			}			
 
 			result.Version.Major = (drvInfo.DriverVersion >> 48) & 0xFFFF;
 			result.Version.Minor = (drvInfo.DriverVersion >> 32) & 0xFFFF;
@@ -1007,7 +1012,7 @@ std::expected<void, Win32Error> nefarius::devcon::bluetooth::RestartBthUsbDevice
 
 	if (!SetupDiEnumDeviceInfo(hDevInfo.get(), instance, &spDevInfoData))
 	{
-		std::unexpected(Win32Error(GetLastError(), "SetupDiEnumDeviceInfo"));
+		return std::unexpected(Win32Error(GetLastError(), "SetupDiEnumDeviceInfo"));
 	}
 
 	const auto enumeratorProperty = GetDeviceRegistryProperty(
@@ -1031,7 +1036,7 @@ std::expected<void, Win32Error> nefarius::devcon::bluetooth::RestartBthUsbDevice
 	{
 		if (!SetupDiRestartDevices(hDevInfo.get(), &spDevInfoData))
 		{
-			std::unexpected(Win32Error(GetLastError(), "SetupDiRestartDevices"));
+			return std::unexpected(Win32Error(GetLastError(), "SetupDiRestartDevices"));
 		}
 
 		return {};
