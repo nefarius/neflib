@@ -173,23 +173,38 @@ namespace
 		//
 		if (drvEnumLastError == ERROR_NO_MORE_ITEMS)
 		{
-			const DEVINST cmInst = spDevInfoData->DevInst;
+			SP_REMOVEDEVICE_PARAMS removeParams;
+			removeParams.ClassInstallHeader.cbSize = sizeof(SP_CLASSINSTALL_HEADER);
+		    removeParams.ClassInstallHeader.InstallFunction = DIF_REMOVE;
+		    removeParams.Scope = DI_REMOVEDEVICE_GLOBAL;
+		    removeParams.HwProfile = 0;
 
-			const CONFIGRET cmRet = CM_Query_And_Remove_SubTree(
-				cmInst,
-				nullptr,
-				nullptr, 
-				0,
-				0
-			);
-
-			if (cmRet != CR_SUCCESS)
+			if(!SetupDiSetClassInstallParams(
+				hDevInfo,
+				spDevInfoData,
+				&removeParams.ClassInstallHeader,
+				sizeof(removeParams))
+				)
 			{
-				const DWORD win32Err = CM_MapCrToWin32Err(cmRet, drvEnumLastError);
+				return std::unexpected(Win32Error("SetupDiSetClassInstallParams"));
+			}
 
-				SetLastError(win32Err);
+			if (!SetupDiCallClassInstaller(DIF_REMOVE, hDevInfo, spDevInfoData))
+			{
+				return std::unexpected(Win32Error("SetupDiCallClassInstaller"));
+			}
 
-				return std::unexpected(Win32Error(win32Err, "CM_Query_And_Remove_SubTree"));
+			SP_DEVINSTALL_PARAMS devParams;
+			devParams.cbSize = sizeof(devParams);
+			if (SetupDiGetDeviceInstallParams(
+					hDevInfo,
+					spDevInfoData,
+					&devParams
+				) && (devParams.Flags & (DI_NEEDRESTART | DI_NEEDREBOOT))
+			)
+			{
+				if (rebootRequired)
+					*rebootRequired = TRUE;
 			}
 
 			// nothing more to do with this instance
