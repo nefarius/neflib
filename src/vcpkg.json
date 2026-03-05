@@ -5,10 +5,6 @@
   "homepage": "https://github.com/nefarius/neflib",
   "license": "MIT",
   "dependencies": [
-    {
-      "name": "vcpkg-msbuild",
-      "host": true
-    },
     "detours",
     "scope-guard",
     "wil"

@@ -31,6 +31,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     - uses: lukka/get-cmake@latest
 
     - name: Setup anew (or from cache) vcpkg (and does not build any package)

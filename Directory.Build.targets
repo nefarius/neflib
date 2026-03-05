@@ -1,0 +1,6 @@
+<Project>
+  <Import
+    Project="$(MSBuildThisFileDirectory)vcpkg\scripts\buildsystems\msbuild\vcpkg.targets"
+    Condition="'$(GITHUB_ACTIONS)' != 'true' AND Exists('$(MSBuildThisFileDirectory)vcpkg\scripts\buildsystems\msbuild\vcpkg.targets')"
+  />
+</Project>

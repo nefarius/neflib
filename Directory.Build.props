@@ -1,0 +1,7 @@
+<Project>
+  <!-- Self-contained vcpkg integration: only when NOT on CI and vcpkg submodule exists -->
+  <Import
+    Project="$(MSBuildThisFileDirectory)vcpkg\scripts\buildsystems\msbuild\vcpkg.props"
+    Condition="'$(GITHUB_ACTIONS)' != 'true' AND Exists('$(MSBuildThisFileDirectory)vcpkg\scripts\buildsystems\msbuild\vcpkg.props')"
+  />
+</Project>
