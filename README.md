@@ -13,6 +13,26 @@ This is a very opinionated C++23 library focussing on making interactions with t
 
 I recommend you use [vcpkg](https://github.com/microsoft/vcpkg) to consume the library, alternatively you can just clone, build and link against the resulting static library.
 
+### Building from source
+
+To build neflib locally from a clone:
+
+1. **Clone with submodules:**
+   ```powershell
+   git clone --recurse-submodules https://github.com/nefarius/neflib.git
+   ```
+   Or for an existing clone:
+   ```powershell
+   git submodule update --init --recursive
+   ```
+
+2. **Bootstrap vcpkg** (first time only):
+   ```powershell
+   .\vcpkg\bootstrap-vcpkg.bat
+   ```
+
+3. **Build in Visual Studio** – MSBuild will run `vcpkg install` from the manifest during the build.
+
 ### Library
 
 To grab and built it automatically via package manager first create a `vcpkg-configuration.json` containing:
