@@ -191,6 +191,10 @@ namespace nefarius::devcon
 	 * Enumerates the instance IDs of every device currently bound to a given driver service,
 	 * across all device setup classes. Intended for finding devices that would be affected by
 	 * stopping/deleting/upgrading a driver service, regardless of which class(es) it serves.
+	 * Only matches the device's function driver via DEVPKEY_Device_Service; a service registered
+	 * as a class filter (UpperFilters/LowerFilters, e.g. via AddClassFilter) is NOT found by this
+	 * function, since a filter is not a device's DEVPKEY_Device_Service. Use
+	 * GetInfClassFilterTargets/ListDeviceInstancesByClass for filter drivers instead.
 	 *
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
 	 * @date	13.08.2026

@@ -621,6 +621,11 @@ std::expected<std::vector<std::wstring>, Win32Error> nefarius::devcon::ListDevic
 		}
 	}
 
+	if (const DWORD lastError = GetLastError(); lastError != ERROR_NO_MORE_ITEMS)
+	{
+		return std::unexpected(Win32Error(lastError, "SetupDiEnumDeviceInfo"));
+	}
+
 	return instances;
 }
 
