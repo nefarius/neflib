@@ -199,17 +199,21 @@ namespace
 			WCHAR valueName[LINE_LEN] = {};
 			WCHAR valueData[LINE_LEN] = {};
 
-			if (!SetupGetStringFieldW(&ctx, 0, root, LINE_LEN, nullptr))
+			//
+			// AddReg/DelReg lines have no key, so field numbering starts at 1: field 1 is the
+			// root, field 2 the subkey, field 3 the value name, field 4 the flags, field 5 the data.
+			// 
+			if (!SetupGetStringFieldW(&ctx, 1, root, LINE_LEN, nullptr))
 			{
 				continue;
 			}
 
 			//
-			// Subkey (field 1) is legitimately empty for class-relative (HKR) entries
+			// Subkey (field 2) is legitimately empty for class-relative (HKR) entries
 			// 
-			SetupGetStringFieldW(&ctx, 1, subkey, LINE_LEN, nullptr);
+			SetupGetStringFieldW(&ctx, 2, subkey, LINE_LEN, nullptr);
 
-			if (!SetupGetStringFieldW(&ctx, 2, valueName, LINE_LEN, nullptr))
+			if (!SetupGetStringFieldW(&ctx, 3, valueName, LINE_LEN, nullptr))
 			{
 				continue;
 			}
@@ -246,7 +250,7 @@ namespace
 
 			std::wstring serviceName;
 
-			if (SetupGetStringFieldW(&ctx, 4, valueData, LINE_LEN, nullptr))
+			if (SetupGetStringFieldW(&ctx, 5, valueData, LINE_LEN, nullptr))
 			{
 				serviceName = valueData;
 			}
