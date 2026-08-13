@@ -10,10 +10,16 @@ namespace
 	// Windows service (and therefore driver/filter) names are case-insensitive; UpperFilters/
 	// LowerFilters entries must be compared the same way, or a filter registered as e.g.
 	// "keyboardcaster" can never be found/removed by a caller passing "KeyboardCaster".
+	//
+	// CompareStringOrdinal (with bIgnoreCase) is used instead of _wcsicmp because the latter's
+	// case mapping depends on the current C locale, which can behave inconsistently across
+	// processes/locales for non-ASCII characters. CompareStringOrdinal performs a fast,
+	// locale-invariant ordinal comparison, which is the recommended approach for non-linguistic
+	// identifiers like these.
 	// 
 	bool EqualsIgnoreCase(const std::wstring& lhs, const wchar_t* rhs)
 	{
-		return _wcsicmp(lhs.c_str(), rhs) == 0;
+		return CompareStringOrdinal(lhs.c_str(), -1, rhs, -1, TRUE) == CSTR_EQUAL;
 	}
 
 	// Helper function to build a multi-string from a vector<wstring>
