@@ -66,15 +66,15 @@ std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(
 
 template
 std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
-	const std::wstring& ServiceName, std::chrono::milliseconds StopTimeout);
+	const std::wstring& ServiceName, std::chrono::milliseconds StopTimeout, bool* RebootRequired);
 
 template
 std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
-	const std::string& ServiceName, std::chrono::milliseconds StopTimeout);
+	const std::string& ServiceName, std::chrono::milliseconds StopTimeout, bool* RebootRequired);
 
 template <nefarius::utilities::string_type StringType>
 std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
-	const StringType& ServiceName, std::chrono::milliseconds StopTimeout)
+	const StringType& ServiceName, std::chrono::milliseconds StopTimeout, bool* RebootRequired)
 {
 	const auto serviceName = ConvertToNarrow(ServiceName);
 
@@ -120,6 +120,8 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 	// 
 	if (status.dwCurrentState != SERVICE_STOPPED)
 	{
+		bool skipWait = false;
+
 		if (status.dwCurrentState != SERVICE_STOP_PENDING)
 		{
 			SERVICE_STATUS controlStatus = {};
@@ -128,33 +130,57 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 			{
 				const DWORD stopError = GetLastError();
 
-				//
-				// The service may have stopped on its own between the status query above and
-				// this call; that is success, not failure.
-				// 
-				if (stopError != ERROR_SERVICE_NOT_ACTIVE)
+				if (stopError == ERROR_SERVICE_NOT_ACTIVE)
+				{
+					//
+					// The service may have stopped on its own between the status query above and
+					// this call; that is success, not failure.
+					// 
+					status.dwCurrentState = SERVICE_STOPPED;
+					skipWait = true;
+				}
+				else if (stopError == ERROR_INVALID_SERVICE_CONTROL)
+				{
+					//
+					// The driver never advertised SERVICE_ACCEPT_STOP (no unload routine), so it
+					// can never be stopped live; waiting for SERVICE_STOPPED would just spin until
+					// StopTimeout for nothing. Proceed to mark it for deletion anyway instead of
+					// failing outright, and let the caller know a reboot is still required for the
+					// removal to fully take effect.
+					// 
+					if (RebootRequired)
+					{
+						*RebootRequired = true;
+					}
+
+					skipWait = true;
+				}
+				else
 				{
 					return std::unexpected(Win32Error(stopError, "ControlService"));
 				}
 			}
 		}
 
-		const auto deadline = std::chrono::steady_clock::now() + StopTimeout;
-
-		while (status.dwCurrentState != SERVICE_STOPPED)
+		if (!skipWait)
 		{
-			if (std::chrono::steady_clock::now() >= deadline)
-			{
-				return std::unexpected(Win32Error(ERROR_SERVICE_REQUEST_TIMEOUT,
-				                                  "Timed out waiting for service to stop"));
-			}
+			const auto deadline = std::chrono::steady_clock::now() + StopTimeout;
 
-			Sleep(std::clamp(status.dwWaitHint / 10, 50UL, 1000UL));
-
-			if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, reinterpret_cast<BYTE*>(&status),
-			                         sizeof(status), &bytesNeeded))
+			while (status.dwCurrentState != SERVICE_STOPPED)
 			{
-				return std::unexpected(Win32Error("QueryServiceStatusEx"));
+				if (std::chrono::steady_clock::now() >= deadline)
+				{
+					return std::unexpected(Win32Error(ERROR_SERVICE_REQUEST_TIMEOUT,
+					                                  "Timed out waiting for service to stop"));
+				}
+
+				Sleep(std::clamp(status.dwWaitHint / 10, 50UL, 1000UL));
+
+				if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, reinterpret_cast<BYTE*>(&status),
+				                         sizeof(status), &bytesNeeded))
+				{
+					return std::unexpected(Win32Error("QueryServiceStatusEx"));
+				}
 			}
 		}
 	}
