@@ -293,7 +293,7 @@ namespace
 
 			for (DWORD field = 5; field <= fieldCount; field++)
 			{
-				if (!SetupGetStringFieldW(&ctx, field, valueData, LINE_LEN, nullptr))
+				if (!SetupGetStringFieldW(&ctx, field, valueData, LINE_LEN, nullptr) || valueData[0] == L'\0')
 				{
 					continue;
 				}
