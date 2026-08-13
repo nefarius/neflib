@@ -83,9 +83,9 @@ namespace nefarius::devcon
 	struct InfClassFilterTarget
 	{
 		///< Device setup class this filter registration targets
-		GUID ClassGuid;
+		GUID ClassGuid = {};
 		///< Whether the INF registers/deregisters an upper or a lower filter
-		nefarius::devcon::DeviceClassFilterPosition Position;
+		nefarius::devcon::DeviceClassFilterPosition Position = nefarius::devcon::DeviceClassFilterPosition::Upper;
 		///< Name of the filter driver service being (de-)registered
 		std::wstring ServiceName;
 	};
@@ -144,7 +144,10 @@ namespace nefarius::devcon
 
 	/**
 	 * Attempts to bring a single device back online without requiring a reboot, trying multiple
-	 * strategies from least to most invasive, each bounded by
+	 * strategies in order of reliability rather than of invasiveness: a USB hub port cycle first
+	 * (the only strategy that works on a device with a handle held open elsewhere, e.g. a
+	 * keyboard), then a software property-change restart, and finally the most invasive removal
+	 * and re-enumeration of the parent devnode as a last resort. Each attempt is bounded by
 	 * DeviceRestartOptions::PerDeviceTimeout so that a stuck driver can never block the caller
 	 * forever. Never throws and never escalates beyond what Options allows.
 	 *

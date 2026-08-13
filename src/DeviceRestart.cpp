@@ -51,13 +51,33 @@ namespace
 
 		std::thread worker([promise = std::move(promise), fn = std::move(Fn)]() mutable
 		{
-			promise.set_value(fn());
+			try
+			{
+				promise.set_value(fn());
+			}
+			catch (...)
+			{
+				promise.set_exception(std::current_exception());
+			}
 		});
 		worker.detach();
 
 		if (future.wait_for(Timeout) == std::future_status::ready)
 		{
-			return future.get();
+			try
+			{
+				return future.get();
+			}
+			catch (...)
+			{
+				//
+				// Fn is not expected to throw, but a stuck-thread caller can never be allowed
+				// to propagate an exception out of RestartDeviceInstance's no-throw contract.
+				// 
+				StrategyOutcome outcome;
+				outcome.Result = std::unexpected(Win32Error(ERROR_UNHANDLED_EXCEPTION));
+				return outcome;
+			}
 		}
 
 		return std::nullopt;
@@ -91,6 +111,11 @@ namespace
 			                                  "CM_Get_DevNode_PropertyW"));
 		}
 
+		if (type != DEVPROP_TYPE_STRING)
+		{
+			return std::unexpected(Win32Error(ERROR_INVALID_DATATYPE, "CM_Get_DevNode_PropertyW"));
+		}
+
 		StripNullCharacters(value);
 
 		return value;
@@ -109,6 +134,11 @@ namespace
 		{
 			return std::unexpected(Win32Error(CM_MapCrToWin32Err(cr, ERROR_CAN_NOT_COMPLETE),
 			                                  "CM_Get_DevNode_PropertyW"));
+		}
+
+		if (type != DEVPROP_TYPE_UINT32)
+		{
+			return std::unexpected(Win32Error(ERROR_INVALID_DATATYPE, "CM_Get_DevNode_PropertyW"));
 		}
 
 		return value;
@@ -248,20 +278,34 @@ namespace
 				continue;
 			}
 
-			std::wstring serviceName;
+			//
+			// UpperFilters/LowerFilters is a REG_MULTI_SZ (flags 0x00010008); an AddReg/DelReg
+			// line may list several filter service names starting at field 5, e.g.
+			// HKR,,"UpperFilters",0x00010008,"filter1","filter2". Emit one target per name; a
+			// DelReg line with no data fields at all (deleting the whole value) still yields a
+			// single target with an empty service name so the affected class isn't lost.
+			// 
+			const DWORD fieldCount = SetupGetFieldCount(&ctx);
+			const auto position = isLower
+				? nefarius::devcon::DeviceClassFilterPosition::Lower
+				: nefarius::devcon::DeviceClassFilterPosition::Upper;
+			bool anyServiceName = false;
 
-			if (SetupGetStringFieldW(&ctx, 5, valueData, LINE_LEN, nullptr))
+			for (DWORD field = 5; field <= fieldCount; field++)
 			{
-				serviceName = valueData;
+				if (!SetupGetStringFieldW(&ctx, field, valueData, LINE_LEN, nullptr))
+				{
+					continue;
+				}
+
+				anyServiceName = true;
+				Results.push_back(nefarius::devcon::InfClassFilterTarget{targetGuid, position, std::wstring(valueData)});
 			}
 
-			Results.push_back(nefarius::devcon::InfClassFilterTarget{
-				targetGuid,
-				isLower
-					? nefarius::devcon::DeviceClassFilterPosition::Lower
-					: nefarius::devcon::DeviceClassFilterPosition::Upper,
-				serviceName
-			});
+			if (!anyServiceName)
+			{
+				Results.push_back(nefarius::devcon::InfClassFilterTarget{targetGuid, position, std::wstring()});
+			}
 		}
 		while (SetupFindNextLine(&ctx, &ctx));
 	}
@@ -519,26 +563,43 @@ std::expected<void, Win32Error> nefarius::devcon::CycleUsbPortOfDevice(const std
 		return std::unexpected(Win32Error(ERROR_NOT_FOUND, "CM_Get_Device_IDW"));
 	}
 
-	ULONG listLength = 0;
 	GUID hubInterfaceGuid = GUID_DEVINTERFACE_USB_HUB;
+	std::vector<WCHAR> listBuffer;
 
-	if (CM_Get_Device_Interface_List_SizeW(&listLength, &hubInterfaceGuid, hubInstanceId,
-	                                       CM_GET_DEVICE_INTERFACE_LIST_PRESENT) != CR_SUCCESS)
+	//
+	// The interface list can change between the size query and the list query (e.g. another hub
+	// arrives/departs concurrently); retry a bounded number of times on CR_BUFFER_SMALL instead
+	// of failing outright.
+	// 
+	for (int attempt = 0; attempt < 3; attempt++)
 	{
-		return std::unexpected(Win32Error(ERROR_NOT_FOUND, "CM_Get_Device_Interface_List_SizeW"));
-	}
+		ULONG listLength = 0;
 
-	if (listLength <= 1)
-	{
-		return std::unexpected(Win32Error(ERROR_NOT_FOUND, "USB hub has no live device interface"));
-	}
+		if (CM_Get_Device_Interface_List_SizeW(&listLength, &hubInterfaceGuid, hubInstanceId,
+		                                       CM_GET_DEVICE_INTERFACE_LIST_PRESENT) != CR_SUCCESS)
+		{
+			return std::unexpected(Win32Error(ERROR_NOT_FOUND, "CM_Get_Device_Interface_List_SizeW"));
+		}
 
-	std::vector<WCHAR> listBuffer(listLength, L'\0');
+		if (listLength <= 1)
+		{
+			return std::unexpected(Win32Error(ERROR_NOT_FOUND, "USB hub has no live device interface"));
+		}
 
-	if (CM_Get_Device_Interface_ListW(&hubInterfaceGuid, hubInstanceId, listBuffer.data(), listLength,
-	                                  CM_GET_DEVICE_INTERFACE_LIST_PRESENT) != CR_SUCCESS)
-	{
-		return std::unexpected(Win32Error(ERROR_NOT_FOUND, "CM_Get_Device_Interface_ListW"));
+		listBuffer.assign(listLength, L'\0');
+
+		const CONFIGRET cr = CM_Get_Device_Interface_ListW(&hubInterfaceGuid, hubInstanceId, listBuffer.data(),
+		                                                   listLength, CM_GET_DEVICE_INTERFACE_LIST_PRESENT);
+
+		if (cr == CR_SUCCESS)
+		{
+			break;
+		}
+
+		if (cr != CR_BUFFER_SMALL || attempt == 2)
+		{
+			return std::unexpected(Win32Error(ERROR_NOT_FOUND, "CM_Get_Device_Interface_ListW"));
+		}
 	}
 
 	const std::wstring hubPath(listBuffer.data());
@@ -579,10 +640,10 @@ std::expected<void, Win32Error> nefarius::devcon::CycleUsbPortOfDevice(const std
 		nullptr
 	);
 
-	const DWORD win32Error = GetLastError();
-
 	if (!success)
 	{
+		const DWORD win32Error = GetLastError();
+
 		if (win32Error == ERROR_GEN_FAILURE)
 		{
 			return std::unexpected(Win32Error(win32Error,
@@ -599,7 +660,8 @@ std::expected<void, Win32Error> nefarius::devcon::CycleUsbPortOfDevice(const std
 
 	if (params.StatusReturned != 0)
 	{
-		return std::unexpected(Win32Error(win32Error, "IOCTL_USB_HUB_CYCLE_PORT reported a non-zero status"));
+		return std::unexpected(Win32Error(ERROR_GEN_FAILURE, std::format(
+			                       "IOCTL_USB_HUB_CYCLE_PORT reported a non-zero status: {}", params.StatusReturned)));
 	}
 
 	return {};
