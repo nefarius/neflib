@@ -6,6 +6,16 @@ using namespace nefarius::utilities;
 
 namespace
 {
+	//
+	// Windows service (and therefore driver/filter) names are case-insensitive; UpperFilters/
+	// LowerFilters entries must be compared the same way, or a filter registered as e.g.
+	// "keyboardcaster" can never be found/removed by a caller passing "KeyboardCaster".
+	// 
+	bool EqualsIgnoreCase(const std::wstring& lhs, const wchar_t* rhs)
+	{
+		return _wcsicmp(lhs.c_str(), rhs) == 0;
+	}
+
 	// Helper function to build a multi-string from a vector<wstring>
 	std::vector<wchar_t> BuildMultiString(const std::vector<std::wstring>& data)
 	{
@@ -107,7 +117,12 @@ std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUI
 		//
 		// Filter not there yet, add
 		// 
-		if (std::ranges::find(filters, filterName) == filters.end())
+		const bool alreadyPresent = std::ranges::any_of(filters, [&filterName](const std::wstring& existing)
+		{
+			return ::EqualsIgnoreCase(filterName, existing.c_str());
+		});
+
+		if (!alreadyPresent)
 		{
 			filters.emplace_back(filterName);
 		}
@@ -218,7 +233,7 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
 		size_t len = wcslen(temp.data());
 		while (len > 0)
 		{
-			if (filterName != &temp[index])
+			if (!::EqualsIgnoreCase(filterName, &temp[index]))
 			{
 				filters.emplace_back(&temp[index]);
 			}
@@ -312,7 +327,7 @@ std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUI
 		size_t len = wcslen(temp.data());
 		while (len > 0)
 		{
-			if (filterName == &temp[index])
+			if (::EqualsIgnoreCase(filterName, &temp[index]))
 			{
 				return true;
 			}
