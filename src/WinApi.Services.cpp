@@ -65,13 +65,16 @@ std::expected<void, Win32Error> nefarius::winapi::services::CreateDriverService(
 }
 
 template
-std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(const std::wstring& ServiceName);
+std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
+	const std::wstring& ServiceName, std::chrono::milliseconds StopTimeout);
 
 template
-std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(const std::string& ServiceName);
+std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
+	const std::string& ServiceName, std::chrono::milliseconds StopTimeout);
 
 template <nefarius::utilities::string_type StringType>
-std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(const StringType& ServiceName)
+std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
+	const StringType& ServiceName, std::chrono::milliseconds StopTimeout)
 {
 	const auto serviceName = ConvertToNarrow(ServiceName);
 
@@ -91,7 +94,7 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 	SC_HANDLE hService = OpenServiceA(
 		hSCManager,
 		serviceName.c_str(),
-		SERVICE_START | DELETE | SERVICE_STOP
+		SERVICE_START | DELETE | SERVICE_STOP | SERVICE_QUERY_STATUS
 	);
 
 	if (!hService)
@@ -100,6 +103,61 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 	}
 
 	SCOPE_GUARD_CAPTURE({ CloseServiceHandle(hService); }, hService);
+
+	SERVICE_STATUS_PROCESS status = {};
+	DWORD bytesNeeded = 0;
+
+	if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, reinterpret_cast<BYTE*>(&status), sizeof(status),
+	                         &bytesNeeded))
+	{
+		return std::unexpected(Win32Error("QueryServiceStatusEx"));
+	}
+
+	//
+	// A service still running (or stopping) when DeleteService is called merely gets flagged for
+	// deletion once its last handle closes; the .sys file stays locked/loaded until then. Stop it
+	// and wait for SERVICE_STOPPED first so the caller can rely on the driver actually being gone.
+	// 
+	if (status.dwCurrentState != SERVICE_STOPPED)
+	{
+		if (status.dwCurrentState != SERVICE_STOP_PENDING)
+		{
+			SERVICE_STATUS controlStatus = {};
+
+			if (!ControlService(hService, SERVICE_CONTROL_STOP, &controlStatus))
+			{
+				const DWORD stopError = GetLastError();
+
+				//
+				// The service may have stopped on its own between the status query above and
+				// this call; that is success, not failure.
+				// 
+				if (stopError != ERROR_SERVICE_NOT_ACTIVE)
+				{
+					return std::unexpected(Win32Error(stopError, "ControlService"));
+				}
+			}
+		}
+
+		const auto deadline = std::chrono::steady_clock::now() + StopTimeout;
+
+		while (status.dwCurrentState != SERVICE_STOPPED)
+		{
+			if (std::chrono::steady_clock::now() >= deadline)
+			{
+				return std::unexpected(Win32Error(ERROR_SERVICE_REQUEST_TIMEOUT,
+				                                  "Timed out waiting for service to stop"));
+			}
+
+			Sleep(std::clamp(status.dwWaitHint / 10, 50UL, 1000UL));
+
+			if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, reinterpret_cast<BYTE*>(&status),
+			                         sizeof(status), &bytesNeeded))
+			{
+				return std::unexpected(Win32Error("QueryServiceStatusEx"));
+			}
+		}
+	}
 
 	if (!DeleteService(hService))
 	{

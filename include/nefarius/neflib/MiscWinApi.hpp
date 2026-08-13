@@ -2,6 +2,8 @@
 // ReSharper disable CppUnusedIncludeDirective
 #pragma once
 
+#include <chrono>
+
 #include <nefarius/neflib/AnyString.hpp>
 #include <nefarius/neflib/UniUtil.hpp>
 #include <nefarius/neflib/Win32Error.hpp>
@@ -127,8 +129,15 @@ namespace nefarius::winapi
 		std::expected<void, nefarius::utilities::Win32Error> CreateDriverService(
 			const StringType& ServiceName, const StringType& DisplayName, const StringType& BinaryPath);
 
+		//
+		// Stops the service (waiting up to StopTimeout for SERVICE_STOPPED, if it isn't already)
+		// before deleting it, so callers don't have to remember to do this themselves; a service
+		// still running when DeleteService is called merely gets marked "pending deletion" until
+		// the last handle to it closes, which silently leaves the old driver resident.
+		// 
 		template <nefarius::utilities::string_type StringType>
-		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverService(const StringType& ServiceName);
+		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverService(
+			const StringType& ServiceName, std::chrono::milliseconds StopTimeout = std::chrono::seconds(10));
 
 		template <nefarius::utilities::string_type StringType>
 		std::expected<SERVICE_STATUS_PROCESS, nefarius::utilities::Win32Error> GetServiceStatus(

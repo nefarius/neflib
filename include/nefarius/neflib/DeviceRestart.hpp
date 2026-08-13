@@ -143,6 +143,107 @@ namespace nefarius::devcon
 	std::expected<void, nefarius::utilities::Win32Error> CycleUsbPortOfDevice(const std::wstring& InstanceId);
 
 	/**
+	 * Outcome of a single DetachDeviceInstance call.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	13.08.2026
+	 */
+	struct DetachResult
+	{
+		///< Instance ID of the device this result refers to
+		std::wstring InstanceId;
+		///< Friendly name/description, if it could be resolved, for logging purposes
+		std::wstring FriendlyName;
+		///< Instance ID of the device's parent devnode; only populated if Succeeded, pass this to
+		///< ReenumerateParentDevNode later to make Windows re-discover the detached device
+		std::wstring ParentInstanceId;
+		///< True if the device sub-tree could be removed (its driver is no longer loaded/locking files)
+		bool Succeeded = false;
+		///< True if the attempt hit the given timeout
+		bool TimedOut = false;
+		///< Win32 error code of the failed attempt, ERROR_SUCCESS if Succeeded
+		DWORD LastError = ERROR_SUCCESS;
+		///< Populated with the blocking driver/application name if the removal was vetoed
+		std::wstring VetoName;
+		///< Populated alongside VetoName with the veto reason reported by the PnP manager
+		PNP_VETO_TYPE VetoType = static_cast<PNP_VETO_TYPE>(0);
+	};
+
+	/**
+	 * Outcome of a single ReenumerateParentDevNode call.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	13.08.2026
+	 */
+	struct ReenumerateResult
+	{
+		///< Instance ID of the (parent) devnode this result refers to
+		std::wstring InstanceId;
+		///< True if the devnode could be located and re-enumerated
+		bool Succeeded = false;
+		///< True if the attempt hit the given timeout
+		bool TimedOut = false;
+		///< Win32 error code of the failed attempt, ERROR_SUCCESS if Succeeded
+		DWORD LastError = ERROR_SUCCESS;
+	};
+
+	/**
+	 * Enumerates the instance IDs of every device currently bound to a given driver service,
+	 * across all device setup classes. Intended for finding devices that would be affected by
+	 * stopping/deleting/upgrading a driver service, regardless of which class(es) it serves.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	13.08.2026
+	 *
+	 * @param 	ServiceName	Name of the driver service to match against DEVPKEY_Device_Service.
+	 * @param 	PresentOnly	(Optional) True to only return devices currently present in the system.
+	 *
+	 * @returns	A std::expected&lt;std::vector&lt;std::wstring&gt;,nefarius::utilities::Win32Error&gt;
+	 */
+	std::expected<std::vector<std::wstring>, nefarius::utilities::Win32Error> ListDeviceInstancesByService(
+		const std::wstring& ServiceName, bool PresentOnly = true);
+
+	/**
+	 * Detaches a single device from the system by removing its devnode sub-tree, WITHOUT
+	 * re-enumerating the parent afterwards. This releases any file locks its driver holds (e.g.
+	 * on the .sys file) so the driver's files/service can be safely replaced or deleted, while
+	 * leaving the caller in control of when (or whether) the device is brought back with
+	 * ReenumerateParentDevNode. Never forces the removal: if the PnP manager vetoes it (a
+	 * driver/application is actively using the device), the veto reason is reported and nothing
+	 * is torn down. Bounded by Timeout so a stuck driver can never block the caller forever.
+	 * Never throws.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	13.08.2026
+	 *
+	 * @param 	InstanceId	Instance ID of the device to detach.
+	 * @param 	Timeout   	(Optional) Upper bound this attempt may take before it is abandoned.
+	 *
+	 * @returns	A DetachResult
+	 */
+	DetachResult DetachDeviceInstance(const std::wstring& InstanceId,
+	                                  std::chrono::milliseconds Timeout = std::chrono::seconds(10));
+
+	/**
+	 * Re-enumerates a devnode previously recorded as the parent of a device detached via
+	 * DetachDeviceInstance, making Windows re-discover and re-bind a driver to whatever is now
+	 * attached to it (e.g. after a driver upgrade replaced the .sys file). Bounded by Timeout so
+	 * a stuck bus driver can never block the caller forever. Never throws.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	13.08.2026
+	 *
+	 * @param 	ParentInstanceId	Instance ID of the parent devnode, as returned in
+	 * 								DetachResult::ParentInstanceId.
+	 * @param 	Timeout				(Optional) Upper bound this attempt may take before it is
+	 * 								abandoned.
+	 *
+	 * @returns	A ReenumerateResult
+	 */
+	ReenumerateResult ReenumerateParentDevNode(const std::wstring& ParentInstanceId,
+	                                           std::chrono::milliseconds Timeout = std::chrono::seconds(10));
+
+	/**
 	 * Attempts to bring a single device back online without requiring a reboot, trying multiple
 	 * strategies in order of reliability rather than of invasiveness: a USB hub port cycle first
 	 * (the only strategy that works on a device with a handle held open elsewhere, e.g. a

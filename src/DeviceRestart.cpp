@@ -42,12 +42,14 @@ namespace
 	// Runs Fn on a worker thread and waits up to Timeout for it to finish. On timeout the worker
 	// keeps running detached (a stuck SetupDiCallClassInstaller/CM_* call cannot be cancelled),
 	// so the caller must never touch anything the closure references after a timeout is reported.
+	// Templated so it can bound any outcome type that default-constructs and exposes a
+	// std::expected<void, Win32Error> Result member (StrategyOutcome, DetachOutcome, ...).
 	// 
-	std::optional<StrategyOutcome> RunBounded(std::chrono::milliseconds Timeout,
-	                                          std::function<StrategyOutcome()> Fn)
+	template <typename TOutcome>
+	std::optional<TOutcome> RunBounded(std::chrono::milliseconds Timeout, std::function<TOutcome()> Fn)
 	{
-		std::promise<StrategyOutcome> promise;
-		std::future<StrategyOutcome> future = promise.get_future();
+		std::promise<TOutcome> promise;
+		std::future<TOutcome> future = promise.get_future();
 
 		std::thread worker([promise = std::move(promise), fn = std::move(Fn)]() mutable
 		{
@@ -72,9 +74,9 @@ namespace
 			{
 				//
 				// Fn is not expected to throw, but a stuck-thread caller can never be allowed
-				// to propagate an exception out of RestartDeviceInstance's no-throw contract.
+				// to propagate an exception out of the no-throw contract of the public APIs.
 				// 
-				StrategyOutcome outcome;
+				TOutcome outcome;
 				outcome.Result = std::unexpected(Win32Error(ERROR_UNHANDLED_EXCEPTION));
 				return outcome;
 			}
@@ -405,13 +407,41 @@ namespace
 	}
 
 	//
-	// Removes the device sub-tree and forces its parent to re-enumerate. Most invasive strategy;
-	// the PnP manager may veto the removal if a driver/application is actively using the device,
-	// in which case we surface the veto reason and never escalate to a forced removal.
+	// Bundles the outcome of a single detach attempt. Kept separate from StrategyOutcome (rather
+	// than deriving from it) since RebootRequired has no meaning for a query-remove-subtree call.
 	// 
-	StrategyOutcome TryRemoveAndReenumerate(const std::wstring& InstanceId)
+	struct DetachOutcome
 	{
-		StrategyOutcome outcome;
+		std::expected<void, Win32Error> Result;
+
+		//
+		// Valid immediately after a successful detach, for same-call-chain reenumeration
+		// (TryRemoveAndReenumerate). Do not persist across process boundaries; use
+		// ParentInstanceId (a stable string identifier) for that instead.
+		// 
+		DEVINST ParentDevInst = 0;
+
+		std::wstring ParentInstanceId;
+
+		std::wstring VetoName;
+
+		PNP_VETO_TYPE VetoType = PNP_VetoTypeUnknown;
+	};
+
+	struct ReenumerateOutcome
+	{
+		std::expected<void, Win32Error> Result;
+	};
+
+	//
+	// Removes a device's devnode sub-tree, releasing any file locks its driver holds, without
+	// re-enumerating the parent. The PnP manager may veto the removal if a driver/application is
+	// actively using the device, in which case the veto reason is surfaced and nothing is torn
+	// down; the removal is never forced.
+	// 
+	DetachOutcome TryDetachDevice(const std::wstring& InstanceId)
+	{
+		DetachOutcome outcome;
 
 		const auto devInst = ::LocateDevNode(InstanceId, CM_LOCATE_DEVNODE_NORMAL);
 
@@ -427,6 +457,14 @@ namespace
 		if (cr != CR_SUCCESS)
 		{
 			outcome.Result = std::unexpected(Win32Error(CM_MapCrToWin32Err(cr, ERROR_NOT_FOUND), "CM_Get_Parent"));
+			return outcome;
+		}
+
+		WCHAR parentInstanceId[MAX_DEVICE_ID_LEN] = {};
+
+		if (CM_Get_Device_IDW(parent, parentInstanceId, MAX_DEVICE_ID_LEN, 0) != CR_SUCCESS)
+		{
+			outcome.Result = std::unexpected(Win32Error(ERROR_NOT_FOUND, "CM_Get_Device_IDW"));
 			return outcome;
 		}
 
@@ -450,7 +488,57 @@ namespace
 			return outcome;
 		}
 
-		cr = CM_Reenumerate_DevNode(parent, CM_REENUMERATE_SYNCHRONOUS);
+		outcome.ParentDevInst = parent;
+		outcome.ParentInstanceId = parentInstanceId;
+		outcome.Result = {};
+		return outcome;
+	}
+
+	ReenumerateOutcome TryReenumerateParent(const std::wstring& ParentInstanceId)
+	{
+		ReenumerateOutcome outcome;
+
+		const auto devInst = ::LocateDevNode(ParentInstanceId, CM_LOCATE_DEVNODE_NORMAL);
+
+		if (!devInst)
+		{
+			outcome.Result = std::unexpected(devInst.error());
+			return outcome;
+		}
+
+		const CONFIGRET cr = CM_Reenumerate_DevNode(devInst.value(), CM_REENUMERATE_SYNCHRONOUS);
+
+		if (cr != CR_SUCCESS)
+		{
+			outcome.Result = std::unexpected(Win32Error(CM_MapCrToWin32Err(cr, ERROR_CAN_NOT_COMPLETE),
+			                                            "CM_Reenumerate_DevNode"));
+			return outcome;
+		}
+
+		outcome.Result = {};
+		return outcome;
+	}
+
+	//
+	// Removes the device sub-tree and forces its parent to re-enumerate. Most invasive restart
+	// strategy; shares TryDetachDevice with the public DetachDeviceInstance API.
+	// 
+	StrategyOutcome TryRemoveAndReenumerate(const std::wstring& InstanceId)
+	{
+		StrategyOutcome outcome;
+
+		const DetachOutcome detach = ::TryDetachDevice(InstanceId);
+
+		outcome.VetoName = detach.VetoName;
+		outcome.VetoType = detach.VetoType;
+
+		if (!detach.Result.has_value())
+		{
+			outcome.Result = std::unexpected(detach.Result.error());
+			return outcome;
+		}
+
+		const CONFIGRET cr = CM_Reenumerate_DevNode(detach.ParentDevInst, CM_REENUMERATE_SYNCHRONOUS);
 
 		if (cr != CR_SUCCESS)
 		{
@@ -498,6 +586,99 @@ std::expected<std::vector<std::wstring>, Win32Error> nefarius::devcon::ListDevic
 	}
 
 	return instances;
+}
+
+std::expected<std::vector<std::wstring>, Win32Error> nefarius::devcon::ListDeviceInstancesByService(
+	const std::wstring& ServiceName, bool PresentOnly)
+{
+	const DWORD flags = DIGCF_ALLCLASSES | (PresentOnly ? DIGCF_PRESENT : 0);
+
+	guards::HDEVINFOHandleGuard hDevInfo(SetupDiGetClassDevs(nullptr, nullptr, nullptr, flags));
+
+	if (hDevInfo.is_invalid())
+	{
+		return std::unexpected(Win32Error("SetupDiGetClassDevs"));
+	}
+
+	std::vector<std::wstring> instances;
+	SP_DEVINFO_DATA devInfoData = {};
+	devInfoData.cbSize = sizeof(devInfoData);
+
+	for (DWORD index = 0; SetupDiEnumDeviceInfo(hDevInfo.get(), index, &devInfoData); index++)
+	{
+		const auto service = ::GetDevNodePropertyString(devInfoData.DevInst, DEVPKEY_Device_Service);
+
+		if (!service || _wcsicmp(service.value().c_str(), ServiceName.c_str()) != 0)
+		{
+			continue;
+		}
+
+		WCHAR instanceId[MAX_DEVICE_ID_LEN] = {};
+
+		if (SetupDiGetDeviceInstanceIdW(hDevInfo.get(), &devInfoData, instanceId, MAX_DEVICE_ID_LEN, nullptr))
+		{
+			instances.emplace_back(instanceId);
+		}
+	}
+
+	return instances;
+}
+
+nefarius::devcon::DetachResult nefarius::devcon::DetachDeviceInstance(
+	const std::wstring& InstanceId, std::chrono::milliseconds Timeout)
+{
+	DetachResult result;
+	result.InstanceId = InstanceId;
+	result.FriendlyName = ::GetDeviceFriendlyNameBestEffort(InstanceId);
+
+	auto outcome = ::RunBounded<DetachOutcome>(Timeout, [InstanceId] { return ::TryDetachDevice(InstanceId); });
+
+	if (!outcome.has_value())
+	{
+		result.TimedOut = true;
+		result.LastError = ERROR_TIMEOUT;
+		return result;
+	}
+
+	if (outcome->Result.has_value())
+	{
+		result.Succeeded = true;
+		result.LastError = ERROR_SUCCESS;
+		result.ParentInstanceId = outcome->ParentInstanceId;
+		return result;
+	}
+
+	result.LastError = outcome->Result.error().getErrorCode();
+	result.VetoName = outcome->VetoName;
+	result.VetoType = outcome->VetoType;
+	return result;
+}
+
+nefarius::devcon::ReenumerateResult nefarius::devcon::ReenumerateParentDevNode(
+	const std::wstring& ParentInstanceId, std::chrono::milliseconds Timeout)
+{
+	ReenumerateResult result;
+	result.InstanceId = ParentInstanceId;
+
+	auto outcome = ::RunBounded<ReenumerateOutcome>(
+		Timeout, [ParentInstanceId] { return ::TryReenumerateParent(ParentInstanceId); });
+
+	if (!outcome.has_value())
+	{
+		result.TimedOut = true;
+		result.LastError = ERROR_TIMEOUT;
+		return result;
+	}
+
+	if (outcome->Result.has_value())
+	{
+		result.Succeeded = true;
+		result.LastError = ERROR_SUCCESS;
+		return result;
+	}
+
+	result.LastError = outcome->Result.error().getErrorCode();
+	return result;
 }
 
 std::expected<void, Win32Error> nefarius::devcon::CycleUsbPortOfDevice(const std::wstring& InstanceId)
@@ -778,7 +959,7 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 			continue;
 		}
 
-		auto outcome = ::RunBounded(Options.PerDeviceTimeout, attempt.Fn);
+		auto outcome = ::RunBounded<StrategyOutcome>(Options.PerDeviceTimeout, attempt.Fn);
 
 		if (!outcome.has_value())
 		{
