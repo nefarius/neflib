@@ -205,19 +205,37 @@ namespace
 
 	int WINAPI EnumCollectCallback(PCWSTR driverPackageInfPath, PVOID enumInfoPtr, PVOID context)
 	{
+		if (!enumInfoPtr || !driverPackageInfPath)
+		{
+			return 0;
+		}
+
 		auto* ctx = static_cast<EnumCollectContext*>(context);
 		const auto* info = static_cast<const nefarius::utilities::DriverStoreOfflineEnumDriverPackageInfoW*>(
 			enumInfoPtr);
 
 		if (info->InboxInf == 0)
 		{
-			nefarius::devcon::DriverStorePackage package;
-			package.DriverPackageInfPath = driverPackageInfPath;
-			package.PublishedInfName = info->PublishedInfName;
-			package.IsInbox = false;
-			package.ProcessorArchitecture = info->ProcessorArchitecture;
-			package.LocaleName = info->LocaleName;
-			ctx->Packages.push_back(std::move(package));
+			try
+			{
+				nefarius::devcon::DriverStorePackage package;
+				package.DriverPackageInfPath = driverPackageInfPath;
+				package.PublishedInfName = std::wstring(info->PublishedInfName,
+					wcsnlen(info->PublishedInfName, std::size(info->PublishedInfName)));
+				package.IsInbox = false;
+				package.ProcessorArchitecture = info->ProcessorArchitecture;
+				package.LocaleName = std::wstring(info->LocaleName,
+					wcsnlen(info->LocaleName, std::size(info->LocaleName)));
+				ctx->Packages.push_back(std::move(package));
+			}
+			catch (const std::bad_alloc&)
+			{
+				//
+				// This callback is invoked directly by drvstore.dll across a C ABI boundary; a
+				// C++ exception must never be allowed to propagate through it.
+				// 
+				return 0;
+			}
 		}
 
 		return 1;
@@ -1345,6 +1363,7 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDriverStorePackage(
 			}
 
 			nefarius::utilities::DrvStore drvStore;
+			std::optional<Win32Error> driverStoreDeleteError;
 
 			if (drvStore.fpDriverStoreOfflineDeleteDriverPackageW)
 			{
@@ -1366,10 +1385,15 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDriverStorePackage(
 					{
 						return {};
 					}
+
 					//
 					// Fall through to SetupUninstallOEMInfW below, reusing the published name
-					// already resolved by the enumeration above.
+					// already resolved by the enumeration above. Keep the original failure
+					// around in case every fallback also fails, so it isn't lost behind a
+					// possibly-unrelated GetLastError() from a later API.
 					// 
+					driverStoreDeleteError = ::NtStatusToWin32Error(
+						drvStore, status, "DriverStoreOfflineDeleteDriverPackageW");
 				}
 			}
 
@@ -1378,12 +1402,41 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDriverStorePackage(
 			{
 				return {};
 			}
+
+			//
+			// Last resort: doesn't require identifying the store package up front, but (unlike
+			// the paths above) will also uninstall any device still actively using this driver.
+			// 
+			Newdev newdev;
+			BOOL reboot = FALSE;
+
+			switch (newdev.CallFunction(newdev.fpDiUninstallDriverW, nullptr, normalisedInfPath, 0, &reboot))
+			{
+			case FunctionCallResult::NotAvailable:
+				return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION, "DiUninstallDriverW"));
+			case FunctionCallResult::Failure:
+				if (driverStoreDeleteError)
+				{
+					return std::unexpected(Win32Error(driverStoreDeleteError->getErrorCode(),
+						std::format("DiUninstallDriverW (after {})",
+							driverStoreDeleteError->getErrorMessageA())));
+				}
+				return std::unexpected(Win32Error("DiUninstallDriverW"));
+			case FunctionCallResult::Success:
+				if (RebootRequired)
+				{
+					*RebootRequired = reboot > 0;
+				}
+				return {};
+			}
+
+			return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
 		}
 	}
 
 	//
-	// Last resort: doesn't require identifying the store package up front, but (unlike the paths
-	// above) will also uninstall any device still actively using this driver.
+	// No identity could be read from the original INF at all (targetIdentity itself was empty),
+	// or the store couldn't be enumerated; fall back straight to DiUninstallDriverW.
 	// 
 	Newdev newdev;
 	BOOL reboot = FALSE;

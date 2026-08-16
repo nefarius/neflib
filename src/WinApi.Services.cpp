@@ -315,12 +315,23 @@ std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::Wa
 
 	while (status.dwCurrentState != DesiredState)
 	{
-		if (std::chrono::steady_clock::now() >= deadline)
+		auto now = std::chrono::steady_clock::now();
+
+		if (now >= deadline)
 		{
 			break;
 		}
 
-		Sleep(std::clamp(status.dwWaitHint / 10, 50UL, 1000UL));
+		const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
+		const auto waitHint = std::clamp(status.dwWaitHint / 10, 50UL, 1000UL);
+		Sleep(static_cast<DWORD>(std::min<std::chrono::milliseconds::rep>(waitHint, remaining.count())));
+
+		now = std::chrono::steady_clock::now();
+
+		if (now >= deadline)
+		{
+			break;
+		}
 
 		if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, reinterpret_cast<BYTE*>(&status),
 		                         sizeof(status), &bytesNeeded))
@@ -352,6 +363,11 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverServiceW
 	const StringType& ServiceName, std::chrono::milliseconds StopTimeout, std::chrono::milliseconds RetryTimeout,
 	bool* RebootRequired)
 {
+	if (RebootRequired)
+	{
+		*RebootRequired = false;
+	}
+
 	const auto deadline = std::chrono::steady_clock::now() + RetryTimeout;
 
 	for (;;)
@@ -385,11 +401,14 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverServiceW
 			(errorCode == ERROR_SERVICE_REQUEST_TIMEOUT) ||
 			(errorCode == ERROR_SERVICE_CANNOT_ACCEPT_CTRL);
 
-		if (!transient || std::chrono::steady_clock::now() >= deadline)
+		const auto now = std::chrono::steady_clock::now();
+
+		if (!transient || now >= deadline)
 		{
 			return std::unexpected(result.error());
 		}
 
-		Sleep(100);
+		const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
+		Sleep(static_cast<DWORD>(std::min<std::chrono::milliseconds::rep>(100, remaining.count())));
 	}
 }

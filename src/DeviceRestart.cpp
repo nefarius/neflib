@@ -190,12 +190,15 @@ namespace
 				}
 			}
 
-			if (std::chrono::steady_clock::now() >= deadline)
+			const auto now = std::chrono::steady_clock::now();
+
+			if (now >= deadline)
 			{
 				return false;
 			}
 
-			Sleep(100);
+			const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
+			Sleep(static_cast<DWORD>(std::min<std::chrono::milliseconds::rep>(100, remaining.count())));
 		}
 	}
 

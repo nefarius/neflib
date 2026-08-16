@@ -266,15 +266,15 @@ namespace nefarius::devcon
 	 */
 	struct DriverStorePackage
 	{
-		///< Absolute path of this package's INF copy inside the driver store
+		/// Absolute path of this package's INF copy inside the driver store
 		std::wstring DriverPackageInfPath;
-		///< Published name in %WINDIR%\INF, e.g. "oem12.inf"
+		/// Published name in %WINDIR%\INF, e.g. "oem12.inf"
 		std::wstring PublishedInfName;
-		///< True for driver packages that ship inbox with Windows itself
+		/// True for driver packages that ship inbox with Windows itself
 		bool IsInbox = false;
-		///< Processor architecture the package was published for
+		/// Processor architecture the package was published for
 		unsigned short ProcessorArchitecture = 0;
-		///< Locale the package was published for
+		/// Locale the package was published for
 		std::wstring LocaleName;
 	};
 
