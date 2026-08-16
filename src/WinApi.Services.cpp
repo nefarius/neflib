@@ -410,5 +410,15 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverServiceW
 
 		const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
 		Sleep(static_cast<DWORD>(std::min<std::chrono::milliseconds::rep>(100, remaining.count())));
+
+		//
+		// Don't start another DeleteDriverService attempt (which can itself block for up to
+		// StopTimeout) once the retry budget is already spent; return the transient error from
+		// this attempt instead of overshooting RetryTimeout.
+		// 
+		if (std::chrono::steady_clock::now() >= deadline)
+		{
+			return std::unexpected(result.error());
+		}
 	}
 }
