@@ -146,6 +146,50 @@ namespace nefarius::winapi
 		template <nefarius::utilities::string_type StringType>
 		std::expected<SERVICE_STATUS_PROCESS, nefarius::utilities::Win32Error> GetServiceStatus(
 			const StringType& ServiceName);
+
+		//
+		// Polls a service's status until it reaches DesiredState or Timeout elapses, whichever
+		// comes first. Always returns the last observed status rather than failing on timeout, so
+		// a caller that just installed/started a driver can distinguish "not there at all"
+		// (Win32Error, e.g. ERROR_SERVICE_DOES_NOT_EXIST) from "present but not (yet) in the
+		// desired state" (a returned status whose dwCurrentState != DesiredState), instead of a
+		// naive immediate probe mistaking the latter for driver failure.
+		// 
+		template <nefarius::utilities::string_type StringType>
+		std::expected<SERVICE_STATUS_PROCESS, nefarius::utilities::Win32Error> WaitForServiceState(
+			const StringType& ServiceName, DWORD DesiredState,
+			std::chrono::milliseconds Timeout = std::chrono::seconds(10));
+
+		template
+		std::expected<SERVICE_STATUS_PROCESS, nefarius::utilities::Win32Error> nefarius::winapi::services::
+		WaitForServiceState(const std::wstring& ServiceName, DWORD DesiredState, std::chrono::milliseconds Timeout);
+
+		template
+		std::expected<SERVICE_STATUS_PROCESS, nefarius::utilities::Win32Error> nefarius::winapi::services::
+		WaitForServiceState(const std::string& ServiceName, DWORD DesiredState, std::chrono::milliseconds Timeout);
+
+		//
+		// Wraps DeleteDriverService in a bounded retry loop, absorbing the brief window after a
+		// filter driver's last bound device has been detached/restarted where the kernel has not
+		// yet fully released the driver image; without this, a caller that removes the class
+		// filter and immediately deletes the service can observe a spurious transient failure.
+		// ERROR_SERVICE_DOES_NOT_EXIST is treated as success (already gone). Existing
+		// DeleteDriverService is untouched, so --remove-driver-service's behavior is unaffected.
+		// 
+		template <nefarius::utilities::string_type StringType>
+		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverServiceWithRetry(
+			const StringType& ServiceName, std::chrono::milliseconds StopTimeout = std::chrono::seconds(10),
+			std::chrono::milliseconds RetryTimeout = std::chrono::seconds(5), bool* RebootRequired = nullptr);
+
+		template
+		std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services::
+		DeleteDriverServiceWithRetry(const std::wstring& ServiceName, std::chrono::milliseconds StopTimeout,
+			std::chrono::milliseconds RetryTimeout, bool* RebootRequired);
+
+		template
+		std::expected<void, nefarius::utilities::Win32Error> nefarius::winapi::services::
+		DeleteDriverServiceWithRetry(const std::string& ServiceName, std::chrono::milliseconds StopTimeout,
+			std::chrono::milliseconds RetryTimeout, bool* RebootRequired);
 	}
 
 	namespace cli

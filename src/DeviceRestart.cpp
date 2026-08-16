@@ -161,6 +161,44 @@ namespace
 		return devInst;
 	}
 
+	//
+	// A restart strategy reporting success (e.g. CM_Reenumerate_DevNode/SetupDiCallClassInstaller
+	// returning CR_SUCCESS/TRUE) only means the restart *mechanism* didn't error out; it does not
+	// guarantee the device is actually back and working (the driver could fail to load, or the
+	// devnode could settle into a problem state). Polls the devnode status until it reports
+	// DN_STARTED with no DN_HAS_PROBLEM, or Timeout elapses. A device that has disappeared
+	// entirely (e.g. unplugged mid-restart) is reported as not online rather than as an error, so
+	// the caller can simply try a more invasive strategy or give up.
+	// 
+	bool WaitForDeviceOnline(const std::wstring& InstanceId, std::chrono::milliseconds Timeout)
+	{
+		const auto deadline = std::chrono::steady_clock::now() + Timeout;
+
+		for (;;)
+		{
+			const auto devInst = ::LocateDevNode(InstanceId, CM_LOCATE_DEVNODE_NORMAL);
+
+			if (devInst)
+			{
+				ULONG status = 0;
+				ULONG problemNumber = 0;
+
+				if (CM_Get_DevNode_Status(&status, &problemNumber, devInst.value(), 0) == CR_SUCCESS &&
+					(status & DN_STARTED) && !(status & DN_HAS_PROBLEM))
+				{
+					return true;
+				}
+			}
+
+			if (std::chrono::steady_clock::now() >= deadline)
+			{
+				return false;
+			}
+
+			Sleep(100);
+		}
+	}
+
 	std::wstring GetDeviceFriendlyNameBestEffort(const std::wstring& InstanceId)
 	{
 		const auto devInst = ::LocateDevNode(InstanceId, CM_LOCATE_DEVNODE_PHANTOM);
@@ -980,10 +1018,22 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 
 		if (outcome->Result.has_value())
 		{
-			result.Strategy = attempt.Strategy;
-			result.Succeeded = true;
-			result.LastError = ERROR_SUCCESS;
-			break;
+			//
+			// Don't just trust the strategy's own success signal: confirm the device is
+			// actually back online (present, started, no problem code) before declaring
+			// victory. If it isn't (yet), fall through to try any remaining, more invasive
+			// strategy instead of reporting a false positive.
+			// 
+			if (::WaitForDeviceOnline(InstanceId, Options.PostRestartVerifyTimeout))
+			{
+				result.Strategy = attempt.Strategy;
+				result.Succeeded = true;
+				result.LastError = ERROR_SUCCESS;
+				break;
+			}
+
+			result.LastError = ERROR_DEVICE_NOT_CONNECTED;
+			continue;
 		}
 
 		result.LastError = outcome->Result.error().getErrorCode();

@@ -37,6 +37,9 @@ namespace nefarius::devcon
 	{
 		///< Upper bound each individual strategy attempt may take before it is abandoned
 		std::chrono::milliseconds PerDeviceTimeout{std::chrono::seconds(10)};
+		///< Upper bound to wait for the devnode to actually report started/no-problem after a
+		///< strategy reports success, before trying the next strategy (or giving up)
+		std::chrono::milliseconds PostRestartVerifyTimeout{std::chrono::seconds(3)};
 		///< Allow attempting a USB hub port cycle
 		bool AllowUsbPortCycle = true;
 		///< Allow attempting a DIF_PROPERTYCHANGE restart
@@ -59,7 +62,10 @@ namespace nefarius::devcon
 		std::wstring FriendlyName;
 		///< The strategy that succeeded; RestartStrategy::None if every attempt failed
 		RestartStrategy Strategy = RestartStrategy::None;
-		///< True if the device could be brought back online without a reboot
+		///< True if the device could be brought back online without a reboot. This reflects a
+		///< verified outcome (the devnode was polled and confirmed started with no problem code
+		///< after the winning strategy ran), not just that the restart mechanism itself didn't
+		///< error out.
 		bool Succeeded = false;
 		///< True if the last attempted strategy hit PerDeviceTimeout
 		bool TimedOut = false;
@@ -254,7 +260,11 @@ namespace nefarius::devcon
 	 * keyboard), then a software property-change restart, and finally the most invasive removal
 	 * and re-enumeration of the parent devnode as a last resort. Each attempt is bounded by
 	 * DeviceRestartOptions::PerDeviceTimeout so that a stuck driver can never block the caller
-	 * forever. Never throws and never escalates beyond what Options allows.
+	 * forever. A strategy reporting success is never trusted blindly: the devnode is polled
+	 * (bounded by DeviceRestartOptions::PostRestartVerifyTimeout) to confirm it actually came
+	 * back started with no problem code before DeviceRestartResult::Succeeded is set; if it
+	 * didn't, the next (more invasive) strategy is tried instead of reporting a false positive.
+	 * Never throws and never escalates beyond what Options allows.
 	 *
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
 	 * @date	13.08.2026
