@@ -257,4 +257,65 @@ namespace nefarius::devcon
 
 		std::expected<void, nefarius::utilities::Win32Error> EnableDisableBthUsbDevice(bool state, int instance = 0);
 	}
+
+	/**
+	 * A single driver package published into the Windows driver store.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	16.08.2026
+	 */
+	struct DriverStorePackage
+	{
+		/// Absolute path of this package's INF copy inside the driver store
+		std::wstring DriverPackageInfPath;
+		/// Published name in %WINDIR%\INF, e.g. "oem12.inf"
+		std::wstring PublishedInfName;
+		/// True for driver packages that ship inbox with Windows itself
+		bool IsInbox = false;
+		/// Processor architecture the package was published for
+		unsigned short ProcessorArchitecture = 0;
+		/// Locale the package was published for
+		std::wstring LocaleName;
+	};
+
+	/**
+	 * Enumerates every non-inbox driver package currently published in the local driver store.
+	 * Uses the undocumented drvstore.dll offline enumeration API; fails with
+	 * ERROR_INVALID_FUNCTION if drvstore.dll or the export it needs isn't available.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	16.08.2026
+	 *
+	 * @returns	A std::expected&lt;std::vector&lt;DriverStorePackage&gt;,nefarius::utilities::Win32Error&gt;
+	 */
+	std::expected<std::vector<DriverStorePackage>, nefarius::utilities::Win32Error> EnumerateDriverStorePackages();
+
+	/**
+	 * Surgically removes the driver store package matching a given original INF file, without
+	 * touching any device node (unlike UninstallDriver/DiUninstallDriverW, which also uninstalls
+	 * devices still using the driver). Matches the target package by its [Version] identity
+	 * (Provider + DriverVer) and deletes it via the undocumented drvstore.dll offline delete API,
+	 * falling back to SetupUninstallOEMInfW and finally to DiUninstallDriverW if the surgical path
+	 * is unavailable or fails. A package that is already absent is treated as success.
+	 *
+	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
+	 * @date	16.08.2026
+	 *
+	 * @param 		  	FullInfPath   	Full pathname of the original INF file.
+	 * @param [in,out]	RebootRequired	If non-null, true if reboot required (only set by the
+	 * 									DiUninstallDriverW fallback).
+	 *
+	 * @returns	A std::expected&lt;void,nefarius::utilities::Win32Error&gt;
+	 */
+	template <nefarius::utilities::string_type StringType>
+	std::expected<void, nefarius::utilities::Win32Error> RemoveDriverStorePackage(
+		const StringType& FullInfPath, bool* RebootRequired = nullptr);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::RemoveDriverStorePackage(
+		const std::wstring& FullInfPath, bool* RebootRequired);
+
+	template
+	std::expected<void, nefarius::utilities::Win32Error> nefarius::devcon::RemoveDriverStorePackage(
+		const std::string& FullInfPath, bool* RebootRequired);
 }

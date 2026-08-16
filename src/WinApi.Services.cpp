@@ -269,3 +269,156 @@ std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::Ge
 
 	return stat;
 }
+
+template
+std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::WaitForServiceState(
+	const std::wstring& ServiceName, DWORD DesiredState, std::chrono::milliseconds Timeout);
+
+template
+std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::WaitForServiceState(
+	const std::string& ServiceName, DWORD DesiredState, std::chrono::milliseconds Timeout);
+
+template <nefarius::utilities::string_type StringType>
+std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::WaitForServiceState(
+	const StringType& ServiceName, DWORD DesiredState, std::chrono::milliseconds Timeout)
+{
+	const auto serviceName = ConvertToWide(ServiceName);
+
+	SC_HANDLE hSCManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+
+	if (!hSCManager)
+	{
+		return std::unexpected(Win32Error("OpenSCManagerW"));
+	}
+
+	SCOPE_GUARD_CAPTURE({ CloseServiceHandle(hSCManager); }, hSCManager);
+
+	SC_HANDLE hService = OpenServiceW(hSCManager, serviceName.c_str(), SERVICE_QUERY_STATUS);
+
+	if (!hService)
+	{
+		return std::unexpected(Win32Error("OpenServiceW"));
+	}
+
+	SCOPE_GUARD_CAPTURE({ CloseServiceHandle(hService); }, hService);
+
+	SERVICE_STATUS_PROCESS status = {};
+	DWORD bytesNeeded = 0;
+
+	if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, reinterpret_cast<BYTE*>(&status), sizeof(status),
+	                         &bytesNeeded))
+	{
+		return std::unexpected(Win32Error("QueryServiceStatusEx"));
+	}
+
+	const auto deadline = std::chrono::steady_clock::now() + Timeout;
+
+	while (status.dwCurrentState != DesiredState)
+	{
+		auto now = std::chrono::steady_clock::now();
+
+		if (now >= deadline)
+		{
+			break;
+		}
+
+		const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
+		const auto waitHint = std::clamp(status.dwWaitHint / 10, 50UL, 1000UL);
+		Sleep(static_cast<DWORD>(std::min<std::chrono::milliseconds::rep>(waitHint, remaining.count())));
+
+		now = std::chrono::steady_clock::now();
+
+		if (now >= deadline)
+		{
+			break;
+		}
+
+		if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, reinterpret_cast<BYTE*>(&status),
+		                         sizeof(status), &bytesNeeded))
+		{
+			return std::unexpected(Win32Error("QueryServiceStatusEx"));
+		}
+	}
+
+	//
+	// Deliberately returned even when dwCurrentState never reached DesiredState within Timeout;
+	// the caller decides whether "present but not yet running" is acceptable (e.g. a demand-start
+	// filter service with no bound device present) or should be reported as a warning.
+	// 
+	return status;
+}
+
+template
+std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverServiceWithRetry(
+	const std::wstring& ServiceName, std::chrono::milliseconds StopTimeout, std::chrono::milliseconds RetryTimeout,
+	bool* RebootRequired);
+
+template
+std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverServiceWithRetry(
+	const std::string& ServiceName, std::chrono::milliseconds StopTimeout, std::chrono::milliseconds RetryTimeout,
+	bool* RebootRequired);
+
+template <nefarius::utilities::string_type StringType>
+std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverServiceWithRetry(
+	const StringType& ServiceName, std::chrono::milliseconds StopTimeout, std::chrono::milliseconds RetryTimeout,
+	bool* RebootRequired)
+{
+	if (RebootRequired)
+	{
+		*RebootRequired = false;
+	}
+
+	const auto deadline = std::chrono::steady_clock::now() + RetryTimeout;
+
+	for (;;)
+	{
+		auto result = DeleteDriverService(ServiceName, StopTimeout, RebootRequired);
+
+		if (result)
+		{
+			return {};
+		}
+
+		const DWORD errorCode = result.error().getErrorCode();
+
+		//
+		// A concurrent/previous attempt already deleted it; that is success, not failure, for an
+		// idempotent "make sure it's gone" operation.
+		// 
+		if (errorCode == ERROR_SERVICE_DOES_NOT_EXIST)
+		{
+			return {};
+		}
+
+		//
+		// These are the transient errors observed in the brief window after a filter driver's
+		// last bound device has been detached/restarted, before the kernel has fully released the
+		// driver image; retrying after a short backoff resolves them without a caller-visible
+		// failure. Anything else (e.g. a genuine permissions problem) is returned immediately.
+		// 
+		const bool transient = (errorCode == ERROR_SERVICE_MARKED_FOR_DELETE) ||
+			(errorCode == ERROR_SHARING_VIOLATION) ||
+			(errorCode == ERROR_SERVICE_REQUEST_TIMEOUT) ||
+			(errorCode == ERROR_SERVICE_CANNOT_ACCEPT_CTRL);
+
+		const auto now = std::chrono::steady_clock::now();
+
+		if (!transient || now >= deadline)
+		{
+			return std::unexpected(result.error());
+		}
+
+		const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
+		Sleep(static_cast<DWORD>(std::min<std::chrono::milliseconds::rep>(100, remaining.count())));
+
+		//
+		// Don't start another DeleteDriverService attempt (which can itself block for up to
+		// StopTimeout) once the retry budget is already spent; return the transient error from
+		// this attempt instead of overshooting RetryTimeout.
+		// 
+		if (std::chrono::steady_clock::now() >= deadline)
+		{
+			return std::unexpected(result.error());
+		}
+	}
+}

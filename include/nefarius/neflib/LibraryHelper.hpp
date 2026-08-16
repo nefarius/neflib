@@ -48,6 +48,39 @@ namespace nefarius::utilities
 		HMODULE _module;
 	};
 
+	//
+	// Like DllHelper, but restricts the search to %SystemRoot%\System32 (LOAD_LIBRARY_SEARCH_SYSTEM32),
+	// so a module that isn't already loaded elsewhere in the process (unlike ntdll.dll) can't be
+	// planted/hijacked from the application directory or another entry of the default DLL search order.
+	//
+	class DllHelperSystem32
+	{
+	public:
+		explicit DllHelperSystem32(LPCWSTR filename) : _module(
+			LoadLibraryExW(filename, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
+		{
+		}
+
+		~DllHelperSystem32()
+		{
+			if (_module)
+			{
+				FreeLibrary(_module);
+			}
+		}
+
+		DllHelperSystem32(const DllHelperSystem32&) = delete;
+		DllHelperSystem32& operator=(const DllHelperSystem32&) = delete;
+
+		ProcPtr operator[](LPCSTR proc_name) const
+		{
+			return ProcPtr(_module ? GetProcAddress(_module, proc_name) : nullptr);
+		}
+
+	private:
+		HMODULE _module;
+	};
+
 	class Newdev
 	{
 	private:
@@ -72,5 +105,53 @@ namespace nefarius::utilities
 			const auto ret = func(args...);
 			return ret ? FunctionCallResult::Success : FunctionCallResult::Failure;
 		}
+	};
+
+	//
+	// drvstore.dll and ntdll.dll's RtlNtStatusToDosError are undocumented; unlike Newdev.dll
+	// there is no SDK header to decltype() their exports from, so the function types are spelled
+	// out explicitly. Signatures/behavior are derived from the working sample at
+	// https://github.com/nefarius/Nefarius.Utilities.DeviceManagement (src/Drivers/DriverStore.cs).
+	//
+	using DriverStoreOfflineEnumDriverPackageCallback_t = int(WINAPI)(PCWSTR DriverPackageInfPath, PVOID EnumInfo,
+	                                                                  PVOID Context);
+	using DriverStoreOfflineEnumDriverPackageW_t = LONG(WINAPI)(
+		DriverStoreOfflineEnumDriverPackageCallback_t* Callback, PVOID Context, PCWSTR TargetSystemRoot);
+	using DriverStoreOfflineDeleteDriverPackageW_t = LONG(WINAPI)(PCWSTR DriverPackageInfPath, ULONG Flags,
+	                                                              PVOID Reserved, PCWSTR TargetSystemRoot,
+	                                                              PCWSTR TargetSystemDrive);
+	using RtlNtStatusToDosError_t = ULONG(WINAPI)(LONG Status);
+
+	//
+	// Mirrors drvstore.dll's (undocumented) DriverStoreOfflineEnumDriverPackageInfoW. The exact,
+	// unpadded byte layout matters since this is passed across the ABI boundary by the OS: 4
+	// (InboxInf) + 2 (ProcessorArchitecture) + 85*2 (LocaleName) + 260*2 (PublishedInfName) = 696
+	// = 0x2B8 bytes, matching the C# reference's `[StructLayout(..., Size = 0x2B8, Pack = 0x4)]`.
+	//
+#pragma pack(push, 4)
+	struct DriverStoreOfflineEnumDriverPackageInfoW
+	{
+		LONG InboxInf;
+		USHORT ProcessorArchitecture;
+		WCHAR LocaleName[85];
+		WCHAR PublishedInfName[260];
+	};
+#pragma pack(pop)
+
+	static_assert(sizeof(DriverStoreOfflineEnumDriverPackageInfoW) == 0x2B8,
+	             "DriverStoreOfflineEnumDriverPackageInfoW layout must match the drvstore.dll ABI");
+
+	class DrvStore
+	{
+	private:
+		DllHelperSystem32 _dll{L"drvstore.dll"};
+		DllHelper _ntdll{L"ntdll.dll"};
+
+	public:
+		DriverStoreOfflineEnumDriverPackageW_t* fpDriverStoreOfflineEnumDriverPackageW = _dll[
+			"DriverStoreOfflineEnumDriverPackageW"];
+		DriverStoreOfflineDeleteDriverPackageW_t* fpDriverStoreOfflineDeleteDriverPackageW = _dll[
+			"DriverStoreOfflineDeleteDriverPackageW"];
+		RtlNtStatusToDosError_t* fpRtlNtStatusToDosError = _ntdll["RtlNtStatusToDosError"];
 	};
 }

@@ -116,6 +116,141 @@ namespace
 		return nullptr;
 	}
 
+	//
+	// Reads a single string field from an INF's [Version] section (e.g. "Provider", "DriverVer"),
+	// used to build a lightweight identity for matching an original INF against its published
+	// copy inside the driver store. Returns std::nullopt if the key isn't present rather than an
+	// error, since not every INF sets every field.
+	//
+	std::optional<std::wstring> ReadInfVersionField(HINF hInf, PCWSTR key)
+	{
+		INFCONTEXT ctx;
+
+		if (!SetupFindFirstLineW(hInf, L"Version", key, &ctx))
+		{
+			return std::nullopt;
+		}
+
+		DWORD required = 0;
+		SetupGetStringFieldW(&ctx, 1, nullptr, 0, &required);
+
+		if (required == 0)
+		{
+			return std::nullopt;
+		}
+
+		std::wstring value(required, L'\0');
+
+		if (!SetupGetStringFieldW(&ctx, 1, value.data(), required, nullptr))
+		{
+			return std::nullopt;
+		}
+
+		//
+		// SetupGetStringFieldW's required size includes the NUL terminator.
+		// 
+		if (!value.empty() && value.back() == L'\0')
+		{
+			value.pop_back();
+		}
+
+		return value;
+	}
+
+	//
+	// Lightweight identity used to match an original INF against a driver store copy without
+	// needing to guess at the published oemNN.inf naming scheme.
+	// 
+	struct DriverStoreIdentity
+	{
+		std::wstring Provider;
+		std::wstring DriverVer;
+	};
+
+	std::optional<DriverStoreIdentity> ReadDriverStoreIdentity(PCWSTR infPath)
+	{
+		guards::INFHandleGuard hInf(SetupOpenInfFileW(infPath, nullptr, INF_STYLE_WIN4, nullptr));
+
+		if (hInf.is_invalid())
+		{
+			return std::nullopt;
+		}
+
+		auto provider = ::ReadInfVersionField(hInf.get(), L"Provider");
+		auto driverVer = ::ReadInfVersionField(hInf.get(), L"DriverVer");
+
+		if (!provider || !driverVer || provider->empty() || driverVer->empty())
+		{
+			return std::nullopt;
+		}
+
+		return DriverStoreIdentity{std::move(*provider), std::move(*driverVer)};
+	}
+
+	bool IdentitiesMatch(const DriverStoreIdentity& a, const DriverStoreIdentity& b)
+	{
+		return _wcsicmp(a.Provider.c_str(), b.Provider.c_str()) == 0 &&
+			_wcsicmp(a.DriverVer.c_str(), b.DriverVer.c_str()) == 0;
+	}
+
+	//
+	// Collects every non-inbox package while DriverStoreOfflineEnumDriverPackageW enumerates the
+	// driver store; always returns 1 (continue) since a full inventory is wanted regardless of
+	// what has been found so far.
+	// 
+	struct EnumCollectContext
+	{
+		std::vector<nefarius::devcon::DriverStorePackage> Packages;
+	};
+
+	int WINAPI EnumCollectCallback(PCWSTR driverPackageInfPath, PVOID enumInfoPtr, PVOID context)
+	{
+		if (!enumInfoPtr || !driverPackageInfPath)
+		{
+			return 0;
+		}
+
+		auto* ctx = static_cast<EnumCollectContext*>(context);
+		const auto* info = static_cast<const nefarius::utilities::DriverStoreOfflineEnumDriverPackageInfoW*>(
+			enumInfoPtr);
+
+		if (info->InboxInf == 0)
+		{
+			try
+			{
+				nefarius::devcon::DriverStorePackage package;
+				package.DriverPackageInfPath = driverPackageInfPath;
+				package.PublishedInfName = std::wstring(info->PublishedInfName,
+					wcsnlen(info->PublishedInfName, std::size(info->PublishedInfName)));
+				package.IsInbox = false;
+				package.ProcessorArchitecture = info->ProcessorArchitecture;
+				package.LocaleName = std::wstring(info->LocaleName,
+					wcsnlen(info->LocaleName, std::size(info->LocaleName)));
+				ctx->Packages.push_back(std::move(package));
+			}
+			catch (const std::bad_alloc&)
+			{
+				//
+				// This callback is invoked directly by drvstore.dll across a C ABI boundary; a
+				// C++ exception must never be allowed to propagate through it.
+				// 
+				return 0;
+			}
+		}
+
+		return 1;
+	}
+
+	Win32Error NtStatusToWin32Error(const nefarius::utilities::DrvStore& drvStore, LONG status, const char* context)
+	{
+		if (drvStore.fpRtlNtStatusToDosError)
+		{
+			return Win32Error(drvStore.fpRtlNtStatusToDosError(status), context);
+		}
+
+		return Win32Error(ERROR_CAN_NOT_COMPLETE, context);
+	}
+
 	std::expected<void, Win32Error> uninstall_device_and_driver(
 		HDEVINFO hDevInfo, PSP_DEVINFO_DATA spDevInfoData, bool* rebootRequired)
 	{
@@ -1156,3 +1291,177 @@ std::expected<void, Win32Error> nefarius::devcon::bluetooth::EnableDisableBthUsb
 
 	return std::unexpected(Win32Error(ERROR_NOT_FOUND));
 }
+
+std::expected<std::vector<nefarius::devcon::DriverStorePackage>, Win32Error>
+nefarius::devcon::EnumerateDriverStorePackages()
+{
+	nefarius::utilities::DrvStore drvStore;
+
+	if (!drvStore.fpDriverStoreOfflineEnumDriverPackageW)
+	{
+		return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION, "DriverStoreOfflineEnumDriverPackageW"));
+	}
+
+	WCHAR windowsDirectory[MAX_PATH] = {};
+
+	if (GetWindowsDirectoryW(windowsDirectory, MAX_PATH) == 0)
+	{
+		return std::unexpected(Win32Error("GetWindowsDirectoryW"));
+	}
+
+	::EnumCollectContext ctx;
+
+	const LONG status = drvStore.fpDriverStoreOfflineEnumDriverPackageW(
+		&::EnumCollectCallback, &ctx, windowsDirectory);
+
+	if (status < 0)
+	{
+		return std::unexpected(::NtStatusToWin32Error(drvStore, status, "DriverStoreOfflineEnumDriverPackageW"));
+	}
+
+	return std::move(ctx.Packages);
+}
+
+template <nefarius::utilities::string_type StringType>
+std::expected<void, Win32Error> nefarius::devcon::RemoveDriverStorePackage(
+	const StringType& FullInfPath, bool* RebootRequired)
+{
+	const std::wstring fullInfPath = ConvertToWide(FullInfPath);
+
+	WCHAR normalisedInfPath[MAX_PATH] = {};
+
+	if (const auto ret = GetFullPathNameW(fullInfPath.c_str(), MAX_PATH, normalisedInfPath, nullptr);
+		(ret >= MAX_PATH) || (ret == FALSE))
+	{
+		return std::unexpected(Win32Error(ERROR_BAD_PATHNAME));
+	}
+
+	//
+	// Surgical path: identify the target package by its [Version] identity, then enumerate the
+	// store to find and delete exactly that package, without touching any device node.
+	// 
+	if (const auto targetIdentity = ::ReadDriverStoreIdentity(normalisedInfPath))
+	{
+		if (const auto packages = EnumerateDriverStorePackages())
+		{
+			const auto& pkgList = packages.value();
+
+			const auto match = std::ranges::find_if(pkgList,
+				[&](const DriverStorePackage& candidate)
+				{
+					const auto candidateIdentity = ::ReadDriverStoreIdentity(candidate.DriverPackageInfPath.c_str());
+					return candidateIdentity && ::IdentitiesMatch(*candidateIdentity, *targetIdentity);
+				});
+
+			if (match == pkgList.end())
+			{
+				//
+				// No matching package in the store; either it was never published this way, or
+				// has already been purged. Either way, there is nothing left to remove.
+				// 
+				return {};
+			}
+
+			nefarius::utilities::DrvStore drvStore;
+			std::optional<Win32Error> driverStoreDeleteError;
+
+			if (drvStore.fpDriverStoreOfflineDeleteDriverPackageW)
+			{
+				WCHAR windowsDirectory[MAX_PATH] = {};
+
+				if (GetWindowsDirectoryW(windowsDirectory, MAX_PATH) != 0)
+				{
+					std::wstring driveRoot(windowsDirectory);
+
+					if (driveRoot.size() > 3)
+					{
+						driveRoot.resize(3);
+					}
+
+					const LONG status = drvStore.fpDriverStoreOfflineDeleteDriverPackageW(
+						match->DriverPackageInfPath.c_str(), 0, nullptr, windowsDirectory, driveRoot.c_str());
+
+					if (status >= 0)
+					{
+						return {};
+					}
+
+					//
+					// Fall through to SetupUninstallOEMInfW below, reusing the published name
+					// already resolved by the enumeration above. Keep the original failure
+					// around in case every fallback also fails, so it isn't lost behind a
+					// possibly-unrelated GetLastError() from a later API.
+					// 
+					driverStoreDeleteError = ::NtStatusToWin32Error(
+						drvStore, status, "DriverStoreOfflineDeleteDriverPackageW");
+				}
+			}
+
+			if (!match->PublishedInfName.empty() &&
+				SetupUninstallOEMInfW(match->PublishedInfName.c_str(), SUOI_FORCEDELETE, nullptr))
+			{
+				return {};
+			}
+
+			//
+			// Last resort: doesn't require identifying the store package up front, but (unlike
+			// the paths above) will also uninstall any device still actively using this driver.
+			// 
+			Newdev newdev;
+			BOOL reboot = FALSE;
+
+			switch (newdev.CallFunction(newdev.fpDiUninstallDriverW, nullptr, normalisedInfPath, 0, &reboot))
+			{
+			case FunctionCallResult::NotAvailable:
+				return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION, "DiUninstallDriverW"));
+			case FunctionCallResult::Failure:
+				if (driverStoreDeleteError)
+				{
+					return std::unexpected(Win32Error(driverStoreDeleteError->getErrorCode(),
+						std::format("DiUninstallDriverW (after {})",
+							driverStoreDeleteError->getErrorMessageA())));
+				}
+				return std::unexpected(Win32Error("DiUninstallDriverW"));
+			case FunctionCallResult::Success:
+				if (RebootRequired)
+				{
+					*RebootRequired = reboot > 0;
+				}
+				return {};
+			}
+
+			return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
+		}
+	}
+
+	//
+	// No identity could be read from the original INF at all (targetIdentity itself was empty),
+	// or the store couldn't be enumerated; fall back straight to DiUninstallDriverW.
+	// 
+	Newdev newdev;
+	BOOL reboot = FALSE;
+
+	switch (newdev.CallFunction(newdev.fpDiUninstallDriverW, nullptr, normalisedInfPath, 0, &reboot))
+	{
+	case FunctionCallResult::NotAvailable:
+		return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION, "DiUninstallDriverW"));
+	case FunctionCallResult::Failure:
+		return std::unexpected(Win32Error("DiUninstallDriverW"));
+	case FunctionCallResult::Success:
+		if (RebootRequired)
+		{
+			*RebootRequired = reboot > 0;
+		}
+		return {};
+	}
+
+	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
+}
+
+template
+std::expected<void, Win32Error> nefarius::devcon::RemoveDriverStorePackage(
+	const std::wstring& FullInfPath, bool* RebootRequired);
+
+template
+std::expected<void, Win32Error> nefarius::devcon::RemoveDriverStorePackage(
+	const std::string& FullInfPath, bool* RebootRequired);
