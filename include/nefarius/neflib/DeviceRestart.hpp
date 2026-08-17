@@ -81,17 +81,25 @@ namespace nefarius::devcon
 		///< stays None on total failure), this is populated even when every attempt failed, for
 		///< diagnostic purposes
 		RestartStrategy LastAttempted = RestartStrategy::None;
-		///< True if the devnode could still be located (CM_LOCATE_DEVNODE_NORMAL) by a final,
-		///< authoritative re-check performed after every strategy has been exhausted. False means
-		///< the device is no longer present (e.g. a phantom/removed node) - there is nothing left
-		///< to restart, which is a materially different situation than a device that is present
-		///< but stuck
+		///< True if the devnode could still be located (CM_LOCATE_DEVNODE_NORMAL) by the final,
+		///< authoritative re-check that RestartDeviceInstance always performs before returning -
+		///< even after a strategy already verified success. False means the device is no longer
+		///< present (e.g. a phantom/removed node) - there is nothing left to restart, which is a
+		///< materially different situation than a device that is present but stuck
 		bool DevicePresent = false;
-		///< DN_STARTED bit observed on the same final re-check; only meaningful if DevicePresent
+		///< True if CM_Get_DevNode_Status was actually queried successfully on that same final
+		///< re-check; FinalStarted/FinalHasProblem/FinalProblemCode are only meaningful when this
+		///< is true (and DevicePresent is true). A device can be DevicePresent but still have this
+		///< false if the status query itself failed
+		bool FinalStatusValid = false;
+		///< CM_Get_DevNode_Status's CONFIGRET from that final re-check when FinalStatusValid is
+		///< false and DevicePresent is true; CR_SUCCESS otherwise
+		CONFIGRET FinalStatusError = CR_SUCCESS;
+		///< DN_STARTED bit observed on the final re-check; only meaningful if FinalStatusValid
 		bool FinalStarted = false;
-		///< DN_HAS_PROBLEM bit observed on the same final re-check; only meaningful if DevicePresent
+		///< DN_HAS_PROBLEM bit observed on the final re-check; only meaningful if FinalStatusValid
 		bool FinalHasProblem = false;
-		///< CM_PROB_* problem code observed on the same final re-check if FinalHasProblem, else 0
+		///< CM_PROB_* problem code observed on the final re-check if FinalHasProblem, else 0
 		ULONG FinalProblemCode = 0;
 	};
 
@@ -280,13 +288,15 @@ namespace nefarius::devcon
 	 * (bounded by DeviceRestartOptions::PostRestartVerifyTimeout) to confirm it actually came
 	 * back started with no problem code before DeviceRestartResult::Succeeded is set; if it
 	 * didn't, the next (more invasive) strategy is tried instead of reporting a false positive.
-	 * If every strategy is exhausted without a verified success, one final authoritative re-check
-	 * (bounded by the same PostRestartVerifyTimeout) is performed before giving up - a device that
-	 * settles into DN_STARTED with no problem code just a little later than a single strategy's
-	 * verify window is still reported as Succeeded rather than as a false failure. The final
-	 * DevicePresent/FinalStarted/FinalHasProblem/FinalProblemCode fields always reflect that last
-	 * observation, letting the caller tell a device that is merely slow to restart apart from one
-	 * that is genuinely stuck (has a problem code) or no longer present at all (a phantom node).
+	 * One final authoritative re-check (bounded by the same PostRestartVerifyTimeout) is always
+	 * performed before returning, whether or not a strategy already verified success - if it
+	 * hadn't yet, a device that settles into DN_STARTED with no problem code just a little later
+	 * than a single strategy's verify window is still reported as Succeeded rather than as a false
+	 * failure. The DevicePresent/FinalStatusValid/FinalStarted/FinalHasProblem/FinalProblemCode
+	 * fields always reflect that last observation (even on the already-verified-success path),
+	 * letting the caller tell a device that is merely slow to restart apart from one that is
+	 * genuinely stuck (has a problem code), no longer present at all (a phantom node), or whose
+	 * final status simply couldn't be queried (FinalStatusValid == false).
 	 * Never throws and never escalates beyond what Options allows.
 	 *
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer

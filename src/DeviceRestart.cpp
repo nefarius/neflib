@@ -169,6 +169,14 @@ namespace
 	struct DevNodeObservation
 	{
 		bool Located = false;
+		///< True if CM_Get_DevNode_Status was actually queried successfully for this devnode;
+		///< Started/HasProblem/ProblemCode are only meaningful when this is true. A device can be
+		///< Located but still have StatusValid == false if the status query itself failed (e.g.
+		///< CR_NO_SUCH_DEVNODE if it vanished between the locate and the status call).
+		bool StatusValid = false;
+		///< CM_Get_DevNode_Status's CONFIGRET when StatusValid is false and Located is true;
+		///< CR_SUCCESS otherwise
+		CONFIGRET StatusError = CR_SUCCESS;
 		bool Started = false;
 		bool HasProblem = false;
 		ULONG ProblemCode = 0;
@@ -201,15 +209,21 @@ namespace
 				ULONG status = 0;
 				ULONG problemNumber = 0;
 
-				if (CM_Get_DevNode_Status(&status, &problemNumber, devInst.value(), 0) == CR_SUCCESS)
+				if (const auto statusResult = CM_Get_DevNode_Status(&status, &problemNumber, devInst.value(), 0);
+					statusResult == CR_SUCCESS)
 				{
+					observation.StatusValid = true;
 					observation.Started = (status & DN_STARTED) != 0;
 					observation.HasProblem = (status & DN_HAS_PROBLEM) != 0;
 					observation.ProblemCode = observation.HasProblem ? problemNumber : 0;
 				}
+				else
+				{
+					observation.StatusError = statusResult;
+				}
 			}
 
-			if (observation.Located && observation.Started && !observation.HasProblem)
+			if (observation.Located && observation.StatusValid && observation.Started && !observation.HasProblem)
 			{
 				return observation;
 			}
@@ -229,7 +243,7 @@ namespace
 	bool WaitForDeviceOnline(const std::wstring& InstanceId, std::chrono::milliseconds Timeout)
 	{
 		const auto observation = ::PollDevNodeStatus(InstanceId, Timeout);
-		return observation.Located && observation.Started && !observation.HasProblem;
+		return observation.Located && observation.StatusValid && observation.Started && !observation.HasProblem;
 	}
 
 	std::wstring GetDeviceFriendlyNameBestEffort(const std::wstring& InstanceId)
@@ -1028,6 +1042,14 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 		}
 	};
 
+	//
+	// Tracks the most recent strategy whose *mechanism* actually reported success (independent of
+	// whether WaitForDeviceOnline verified it in time), so the delayed-verification path below can
+	// credit the strategy that plausibly caused the device to come back, instead of whatever was
+	// merely tried last (which may have been vetoed, errored out, or timed out).
+	// 
+	RestartStrategy lastMechanismSucceeded = RestartStrategy::None;
+
 	for (const auto& attempt : attempts)
 	{
 		if (!attempt.Enabled)
@@ -1053,6 +1075,8 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 
 		if (outcome->Result.has_value())
 		{
+			lastMechanismSucceeded = attempt.Strategy;
+
 			//
 			// Don't just trust the strategy's own success signal: confirm the device is
 			// actually back online (present, started, no problem code) before declaring
@@ -1090,18 +1114,25 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 	const auto finalObservation = ::PollDevNodeStatus(InstanceId, Options.PostRestartVerifyTimeout);
 
 	result.DevicePresent = finalObservation.Located;
-	result.FinalStarted = finalObservation.Started;
-	result.FinalHasProblem = finalObservation.HasProblem;
-	result.FinalProblemCode = finalObservation.ProblemCode;
+	result.FinalStatusValid = finalObservation.StatusValid;
+	result.FinalStatusError = finalObservation.StatusError;
 
-	if (!result.Succeeded && finalObservation.Located && finalObservation.Started && !finalObservation.HasProblem)
+	if (finalObservation.StatusValid)
+	{
+		result.FinalStarted = finalObservation.Started;
+		result.FinalHasProblem = finalObservation.HasProblem;
+		result.FinalProblemCode = finalObservation.ProblemCode;
+	}
+
+	if (!result.Succeeded && finalObservation.Located && finalObservation.StatusValid &&
+		finalObservation.Started && !finalObservation.HasProblem)
 	{
 		result.Succeeded = true;
 		result.LastError = ERROR_SUCCESS;
 
 		if (result.Strategy == RestartStrategy::None)
 		{
-			result.Strategy = result.LastAttempted;
+			result.Strategy = lastMechanismSucceeded;
 		}
 	}
 
