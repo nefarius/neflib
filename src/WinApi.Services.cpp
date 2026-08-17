@@ -118,7 +118,10 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 	// deletion once its last handle closes; the .sys file stays locked/loaded until then. Stop it
 	// and wait for SERVICE_STOPPED first so the caller can rely on the driver actually being gone.
 	// Accumulated locally (rather than trusting the caller to have pre-initialized *RebootRequired)
-	// and only written back once DeleteService has actually succeeded.
+	// and only written back once DeleteService has actually succeeded. Reserved for genuine
+	// reboot evidence; none of the paths below currently produce any, since a driver simply not
+	// supporting a live stop is not such evidence (see the ERROR_INVALID_SERVICE_CONTROL comment
+	// below).
 	// 
 	bool rebootRequiredLocal = false;
 
@@ -153,13 +156,16 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 					if (stopError == ERROR_INVALID_SERVICE_CONTROL)
 					{
 						//
-						// The driver never advertised SERVICE_ACCEPT_STOP (no unload routine), so
-						// it can never be stopped live; waiting for SERVICE_STOPPED would just
-						// spin until StopTimeout for nothing. Proceed to mark it for deletion
-						// anyway instead of failing outright, and let the caller know a reboot is
-						// still required for the removal to fully take effect.
+						// The driver never advertised SERVICE_ACCEPT_STOP. This is the norm - not
+						// the exception - for class filter drivers, which are unloaded by the PnP
+						// manager tearing down/rebuilding the device stack (e.g. via the restart
+						// this uninstall already attempts), not via a live SCM stop request. It is
+						// NOT, by itself, evidence that a reboot will be needed: whether that is
+						// true depends entirely on whether the device(s) still bound to it get
+						// reset, which is reported independently (per-device) by the restart step.
+						// Waiting for SERVICE_STOPPED here would just spin until StopTimeout for
+						// nothing, so proceed straight to marking it for deletion instead.
 						// 
-						rebootRequiredLocal = true;
 						break;
 					}
 
