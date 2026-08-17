@@ -133,10 +133,13 @@ namespace nefarius::winapi
 		// Stops the service (waiting up to StopTimeout for SERVICE_STOPPED, if it isn't already)
 		// before deleting it, so callers don't have to remember to do this themselves; a service
 		// still running when DeleteService is called merely gets marked "pending deletion" until
-		// the last handle to it closes, which silently leaves the old driver resident. Some kernel
-		// drivers never advertise SERVICE_ACCEPT_STOP (no unload routine) and can therefore never
-		// be stopped live; that case is not treated as failure, but is reported back via
-		// RebootRequired since the service still only gets marked for deletion until the next boot.
+		// the last handle to it closes, which silently leaves the old driver resident. Class filter
+		// drivers generally never advertise SERVICE_ACCEPT_STOP (no unload routine) and can only be
+		// unloaded by the PnP manager tearing down their device stacks; that case is not treated as
+		// failure and does not, by itself, set RebootRequired (whether a reboot is actually needed
+		// depends on the affected devices being reset, which the caller drives separately). To get
+		// an outright removal rather than a lingering "marked for deletion" registration, restart
+		// the bound devices and wait for SERVICE_STOPPED (e.g. via WaitForServiceState) first.
 		// 
 		template <nefarius::utilities::string_type StringType>
 		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverService(
