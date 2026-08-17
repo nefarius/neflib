@@ -471,7 +471,15 @@ namespace
 
 		if (!SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, hDevInfo.get(), &devInfoData))
 		{
+			//
+			// Don't inspect the install params below on a failed call: DI_NEEDREBOOT/DI_NEEDRESTART
+			// reflects the outcome of a class installer action that actually ran, and can otherwise
+			// carry stale/incidental flags from this devinfo set that have nothing to do with this
+			// particular (failed) attempt - a false "reboot needed" signal for a device that in fact
+			// was never successfully touched by this strategy.
+			// 
 			outcome.Result = std::unexpected(Win32Error("SetupDiCallClassInstaller"));
+			return outcome;
 		}
 
 		SP_DEVINSTALL_PARAMS_W installParams = {};
@@ -480,11 +488,6 @@ namespace
 		if (SetupDiGetDeviceInstallParamsW(hDevInfo.get(), &devInfoData, &installParams))
 		{
 			outcome.RebootRequired = (installParams.Flags & (DI_NEEDRESTART | DI_NEEDREBOOT)) != 0;
-		}
-
-		if (!outcome.Result)
-		{
-			return outcome;
 		}
 
 		outcome.Result = {};
@@ -1071,11 +1074,17 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 			break;
 		}
 
-		result.RebootRequired = result.RebootRequired || outcome->RebootRequired;
-
 		if (outcome->Result.has_value())
 		{
 			lastMechanismSucceeded = attempt.Strategy;
+
+			//
+			// Only trust this strategy's RebootRequired signal now that its mechanism actually
+			// succeeded: install-params flags read after a failed attempt can be stale/incidental
+			// and would otherwise let a "device could not be restarted" warning outrank a driver
+			// operation (e.g. service removal) that itself completed cleanly.
+			// 
+			result.RebootRequired = result.RebootRequired || outcome->RebootRequired;
 
 			//
 			// Don't just trust the strategy's own success signal: confirm the device is
