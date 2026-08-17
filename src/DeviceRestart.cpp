@@ -162,44 +162,74 @@ namespace
 	}
 
 	//
+	// Snapshot of a single CM_Get_DevNode_Status observation, self-contained so callers can tell
+	// "device is present but stuck with a problem code" apart from "device is no longer present
+	// at all" (a phantom/removed node) instead of collapsing both into a single bool.
+	// 
+	struct DevNodeObservation
+	{
+		bool Located = false;
+		bool Started = false;
+		bool HasProblem = false;
+		ULONG ProblemCode = 0;
+	};
+
+	//
 	// A restart strategy reporting success (e.g. CM_Reenumerate_DevNode/SetupDiCallClassInstaller
 	// returning CR_SUCCESS/TRUE) only means the restart *mechanism* didn't error out; it does not
 	// guarantee the device is actually back and working (the driver could fail to load, or the
 	// devnode could settle into a problem state). Polls the devnode status until it reports
-	// DN_STARTED with no DN_HAS_PROBLEM, or Timeout elapses. A device that has disappeared
-	// entirely (e.g. unplugged mid-restart) is reported as not online rather than as an error, so
-	// the caller can simply try a more invasive strategy or give up.
+	// DN_STARTED with no DN_HAS_PROBLEM, or Timeout elapses, returning whichever observation was
+	// current at that point (online or not). A device that has disappeared entirely (e.g.
+	// unplugged mid-restart, or a phantom node) is reflected as Located == false rather than as an
+	// error, so the caller can simply try a more invasive strategy, or give up, or - for the final
+	// authoritative re-check in RestartDeviceInstance - treat it as "nothing left to restart"
+	// rather than "stuck, needs a reboot".
 	// 
-	bool WaitForDeviceOnline(const std::wstring& InstanceId, std::chrono::milliseconds Timeout)
+	DevNodeObservation PollDevNodeStatus(const std::wstring& InstanceId, std::chrono::milliseconds Timeout)
 	{
 		const auto deadline = std::chrono::steady_clock::now() + Timeout;
 
 		for (;;)
 		{
-			const auto devInst = ::LocateDevNode(InstanceId, CM_LOCATE_DEVNODE_NORMAL);
+			DevNodeObservation observation;
 
-			if (devInst)
+			if (const auto devInst = ::LocateDevNode(InstanceId, CM_LOCATE_DEVNODE_NORMAL); devInst)
 			{
+				observation.Located = true;
+
 				ULONG status = 0;
 				ULONG problemNumber = 0;
 
-				if (CM_Get_DevNode_Status(&status, &problemNumber, devInst.value(), 0) == CR_SUCCESS &&
-					(status & DN_STARTED) && !(status & DN_HAS_PROBLEM))
+				if (CM_Get_DevNode_Status(&status, &problemNumber, devInst.value(), 0) == CR_SUCCESS)
 				{
-					return true;
+					observation.Started = (status & DN_STARTED) != 0;
+					observation.HasProblem = (status & DN_HAS_PROBLEM) != 0;
+					observation.ProblemCode = observation.HasProblem ? problemNumber : 0;
 				}
+			}
+
+			if (observation.Located && observation.Started && !observation.HasProblem)
+			{
+				return observation;
 			}
 
 			const auto now = std::chrono::steady_clock::now();
 
 			if (now >= deadline)
 			{
-				return false;
+				return observation;
 			}
 
 			const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
 			Sleep(static_cast<DWORD>(std::min<std::chrono::milliseconds::rep>(100, remaining.count())));
 		}
+	}
+
+	bool WaitForDeviceOnline(const std::wstring& InstanceId, std::chrono::milliseconds Timeout)
+	{
+		const auto observation = ::PollDevNodeStatus(InstanceId, Timeout);
+		return observation.Located && observation.Started && !observation.HasProblem;
 	}
 
 	std::wstring GetDeviceFriendlyNameBestEffort(const std::wstring& InstanceId)
@@ -1005,6 +1035,8 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 			continue;
 		}
 
+		result.LastAttempted = attempt.Strategy;
+
 		auto outcome = ::RunBounded<StrategyOutcome>(Options.PerDeviceTimeout, attempt.Fn);
 
 		if (!outcome.has_value())
@@ -1042,6 +1074,35 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 		result.LastError = outcome->Result.error().getErrorCode();
 		result.VetoName = outcome->VetoName;
 		result.VetoType = outcome->VetoType;
+	}
+
+	//
+	// Every strategy has been exhausted (or none were enabled) without a verified success. Before
+	// reporting failure, take one final authoritative look at the devnode instead of trusting the
+	// last strategy's own (possibly premature) verify window: this is a plain status query, safe
+	// to run even if the last attempt above hit PerDeviceTimeout and its worker is still running
+	// in the background, since it does not touch anything that worker owns. A device that settles
+	// into DN_STARTED with no problem code just a little later than a single strategy's verify
+	// window is reported as Succeeded here rather than as a false failure; a device that is no
+	// longer present at all, or is present but genuinely stuck with a problem code, is reported as
+	// such via DevicePresent/FinalStarted/FinalHasProblem/FinalProblemCode either way.
+	// 
+	const auto finalObservation = ::PollDevNodeStatus(InstanceId, Options.PostRestartVerifyTimeout);
+
+	result.DevicePresent = finalObservation.Located;
+	result.FinalStarted = finalObservation.Started;
+	result.FinalHasProblem = finalObservation.HasProblem;
+	result.FinalProblemCode = finalObservation.ProblemCode;
+
+	if (!result.Succeeded && finalObservation.Located && finalObservation.Started && !finalObservation.HasProblem)
+	{
+		result.Succeeded = true;
+		result.LastError = ERROR_SUCCESS;
+
+		if (result.Strategy == RestartStrategy::None)
+		{
+			result.Strategy = result.LastAttempted;
+		}
 	}
 
 	return result;
