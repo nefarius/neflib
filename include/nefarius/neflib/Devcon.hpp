@@ -294,7 +294,8 @@ namespace nefarius::devcon
 	 * Surgically removes the driver store package matching a given original INF file, without
 	 * touching any device node (unlike UninstallDriver/DiUninstallDriverW, which also uninstalls
 	 * devices still using the driver). Matches the target package by its [Version] identity
-	 * (Provider + DriverVer) and deletes it via the undocumented drvstore.dll offline delete API,
+	 * (Provider + DriverVer) as well as the base name of the original INF file the package was
+	 * staged from, and deletes it via the undocumented drvstore.dll offline delete API,
 	 * falling back to SetupUninstallOEMInfW and finally to DiUninstallDriverW if the surgical path
 	 * is unavailable or fails. A package that is already absent is treated as success.
 	 *
