@@ -61,4 +61,4 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=x64 test\neflib-tests.vcxproj
-        .\x64\${{env.BUILD_CONFIGURATION}}\neflib-tests.exe
+        .\test\x64\${{env.BUILD_CONFIGURATION}}\neflib-tests.exe
