@@ -1,0 +1,10 @@
+{
+  "name": "neflib-tests",
+  "version": "1.0.0",
+  "description": "Targeted diagnostics tests for neflib.",
+  "license": "MIT",
+  "dependencies": [
+    "wil"
+  ],
+  "supports": "windows & static & !uwp"
+}
