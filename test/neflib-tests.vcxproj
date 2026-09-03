@@ -90,6 +90,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DiagnosticsTests.cpp" />
+    <ClCompile Include="DriverStoreTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\src\neflib.vcxproj">
