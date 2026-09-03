@@ -31,7 +31,8 @@ namespace nefarius::utilities
 	class DllHelper
 	{
 	public:
-		explicit DllHelper(LPCTSTR filename) : _module(LoadLibrary(filename))
+		explicit DllHelper(LPCTSTR filename) : _module(LoadLibrary(filename)),
+		                                       _loadError(_module ? ERROR_SUCCESS : GetLastError())
 		{
 		}
 
@@ -42,10 +43,22 @@ namespace nefarius::utilities
 			return ProcPtr(GetProcAddress(_module, proc_name));
 		}
 
+		//
+		// GetLastError() captured immediately after LoadLibrary, so a caller whose function
+		// pointer(s) came back null can tell "the DLL itself couldn't be loaded" (e.g.
+		// ERROR_MOD_NOT_FOUND on an OS missing this optional component) apart from "the DLL
+		// loaded fine but doesn't export this particular function" - both currently collapse into
+		// the same generic ERROR_INVALID_FUNCTION at call sites otherwise.
+		//
+		[[nodiscard]] DWORD GetLoadError() const { return _loadError; }
+
+		[[nodiscard]] bool IsLoaded() const { return _module != nullptr; }
+
 		static HMODULE _parent_module;
 
 	private:
 		HMODULE _module;
+		DWORD _loadError;
 	};
 
 	//
@@ -105,6 +118,15 @@ namespace nefarius::utilities
 			const auto ret = func(args...);
 			return ret ? FunctionCallResult::Success : FunctionCallResult::Failure;
 		}
+
+		//
+		// GetLastError() captured when Newdev.dll itself failed to load; ERROR_SUCCESS if it
+		// loaded fine (in which case a NotAvailable CallFunction result means this particular
+		// export is simply missing from the loaded Newdev.dll, e.g. on a very old OS). Lets a
+		// caller building the resulting Win32Error distinguish the two instead of always
+		// reporting the generic ERROR_INVALID_FUNCTION.
+		//
+		[[nodiscard]] DWORD GetLoadError() const { return _dll.GetLoadError(); }
 	};
 
 	//

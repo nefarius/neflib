@@ -331,7 +331,10 @@ namespace
 
 		if (!newdev.fpDiUninstallDevice || !newdev.fpDiUninstallDriverW)
 		{
-			return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION));
+			return std::unexpected(newdev.GetLoadError() != ERROR_SUCCESS
+				                       ? Win32Error(newdev.GetLoadError(), "Failed to load Newdev.dll")
+				                       : Win32Error(ERROR_PROC_NOT_FOUND,
+				                                   "DiUninstallDevice/DiUninstallDriverW export not found"));
 		}
 
 		SP_DRVINFO_DATA_W drvInfoData;
@@ -520,6 +523,17 @@ namespace
 
 	BOOL g_MbCalled = FALSE;
 
+	//
+	// Captured from the intercepted MessageBoxW call below so a caller doesn't just see an opaque
+	// "InstallHinfSectionW failed" - the dialog text/caption SetupAPI would otherwise have shown
+	// the (non-interactive) user is often the only place the actual failure reason is surfaced.
+	// Protected by the same named mutex InfDefaultInstall/InfDefaultUninstall already take before
+	// attaching the detour (see the "SharedLock" CreateMutex calls below), since only one INF
+	// (un)install can be in flight at a time.
+	// 
+	std::wstring g_LastMessageBoxCaption;
+	std::wstring g_LastMessageBoxText;
+
 	decltype(RestartDialogEx)* real_RestartDialogEx = RestartDialogEx;
 
 	int DetourRestartDialogEx(
@@ -542,10 +556,10 @@ namespace
 	)
 	{
 		UNREFERENCED_PARAMETER(hWnd);
-		UNREFERENCED_PARAMETER(lpText);
-		UNREFERENCED_PARAMETER(lpCaption);
 		UNREFERENCED_PARAMETER(uType);
 
+		g_LastMessageBoxText = lpText ? lpText : L"";
+		g_LastMessageBoxCaption = lpCaption ? lpCaption : L"";
 		g_MbCalled = TRUE;
 
 		return IDOK;
@@ -666,9 +680,12 @@ std::expected<void, Win32Error> nefarius::devcon::Update(const StringType& Hardw
 	))
 	{
 	case FunctionCallResult::NotAvailable:
-		return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION));
+		return std::unexpected(newdev.GetLoadError() != ERROR_SUCCESS
+			                       ? Win32Error(newdev.GetLoadError(), "Failed to load Newdev.dll")
+			                       : Win32Error(ERROR_PROC_NOT_FOUND,
+			                                   "UpdateDriverForPlugAndPlayDevicesW export not found"));
 	case FunctionCallResult::Failure:
-		return std::unexpected(Win32Error(GetLastError()));
+		return std::unexpected(Win32Error("UpdateDriverForPlugAndPlayDevicesW"));
 	case FunctionCallResult::Success:
 		if (RebootRequired)
 			*RebootRequired = reboot > 0;
@@ -704,9 +721,11 @@ std::expected<void, Win32Error> nefarius::devcon::InstallDriver(const StringType
 	))
 	{
 	case FunctionCallResult::NotAvailable:
-		return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION));
+		return std::unexpected(newdev.GetLoadError() != ERROR_SUCCESS
+			                       ? Win32Error(newdev.GetLoadError(), "Failed to load Newdev.dll")
+			                       : Win32Error(ERROR_PROC_NOT_FOUND, "DiInstallDriverW export not found"));
 	case FunctionCallResult::Failure:
-		return std::unexpected(Win32Error(GetLastError()));
+		return std::unexpected(Win32Error("DiInstallDriverW"));
 	case FunctionCallResult::Success:
 		if (RebootRequired)
 			*RebootRequired = reboot > 0;
@@ -742,9 +761,11 @@ std::expected<void, Win32Error> nefarius::devcon::UninstallDriver(const StringTy
 	))
 	{
 	case FunctionCallResult::NotAvailable:
-		return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION));
+		return std::unexpected(newdev.GetLoadError() != ERROR_SUCCESS
+			                       ? Win32Error(newdev.GetLoadError(), "Failed to load Newdev.dll")
+			                       : Win32Error(ERROR_PROC_NOT_FOUND, "DiUninstallDriverW export not found"));
 	case FunctionCallResult::Failure:
-		return std::unexpected(Win32Error(GetLastError()));
+		return std::unexpected(Win32Error("DiUninstallDriverW"));
 	case FunctionCallResult::Success:
 		if (RebootRequired)
 			*RebootRequired = reboot > 0;
@@ -893,6 +914,8 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 
 		g_MbCalled = FALSE;
 		g_RestartDialogExCalled = FALSE;
+		g_LastMessageBoxCaption.clear();
+		g_LastMessageBoxText.clear();
 
 		InstallHinfSectionW(nullptr, nullptr, pszDest, 0);
 
@@ -905,12 +928,27 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 		DetourTransactionCommit();
 
 		//
-		// If a message box call was intercepted, we encountered an error
+		// If a message box call was intercepted, we encountered an error. SetupAPI's dialog text
+		// is often the *only* place the actual failure reason (e.g. a missing dependency, a
+		// signature problem) is surfaced; without it, callers only ever see a generic
+		// "InstallHinfSectionW failed" with whatever (possibly stale/unrelated) code GetLastError()
+		// happened to report.
 		// 
 		if (g_MbCalled)
 		{
 			g_MbCalled = FALSE;
-			return std::unexpected(Win32Error(win32Error, "InstallHinfSectionW"));
+
+			std::string context = "InstallHinfSectionW";
+
+			if (!g_LastMessageBoxText.empty())
+			{
+				context += std::format(" (dialog: \"{}\")",
+				                      ConvertWideToANSI(g_LastMessageBoxCaption.empty()
+					                                        ? g_LastMessageBoxText
+					                                        : g_LastMessageBoxCaption + L": " + g_LastMessageBoxText));
+			}
+
+			return std::unexpected(Win32Error(win32Error, context));
 		}
 	}
 
@@ -945,7 +983,9 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 	))
 	{
 	case FunctionCallResult::NotAvailable:
-		return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION, "DiInstallDriverW"));
+		return std::unexpected(newdev.GetLoadError() != ERROR_SUCCESS
+			                       ? Win32Error(newdev.GetLoadError(), "Failed to load Newdev.dll")
+			                       : Win32Error(ERROR_PROC_NOT_FOUND, "DiInstallDriverW export not found"));
 	case FunctionCallResult::Failure:
 		return std::unexpected(Win32Error("DiInstallDriverW"));
 	case FunctionCallResult::Success:
@@ -1020,23 +1060,52 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const Stri
 		}
 
 		g_RestartDialogExCalled = FALSE;
+		g_MbCalled = FALSE;
+		g_LastMessageBoxCaption.clear();
+		g_LastMessageBoxText.clear();
 
 		//
 		// Some implementations are bugged and do not respect the non-interactive flags,
-		// so we catch the use of common dialog APIs and nullify their impact :)
+		// so we catch the use of common dialog APIs and nullify their impact :). Unlike the
+		// original implementation, MessageBoxW is now intercepted here too (matching
+		// InfDefaultInstall): InstallHinfSectionW itself has no return value and never sets
+		// GetLastError() to anything meaningful for [DefaultUninstall], so a suppressed error
+		// dialog is the *only* signal available that the uninstall actually failed. Without this,
+		// a broken [DefaultUninstall] section was previously always reported as success.
 		// 
 
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
+		DetourAttach((void**)&real_MessageBoxW, DetourMessageBoxW); // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourAttach((void**)&real_RestartDialogEx, DetourRestartDialogEx); // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
 
 		InstallHinfSectionW(nullptr, nullptr, pszDest, 0);
 
+		const DWORD win32Error = GetLastError();
+
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
+		DetourDetach((void**)&real_MessageBoxW, DetourMessageBoxW); // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourDetach((void**)&real_RestartDialogEx, DetourRestartDialogEx); // NOLINT(clang-diagnostic-microsoft-cast)
 		DetourTransactionCommit();
+
+		if (g_MbCalled)
+		{
+			g_MbCalled = FALSE;
+
+			std::string context = "InstallHinfSectionW";
+
+			if (!g_LastMessageBoxText.empty())
+			{
+				context += std::format(" (dialog: \"{}\")",
+				                      ConvertWideToANSI(g_LastMessageBoxCaption.empty()
+					                                        ? g_LastMessageBoxText
+					                                        : g_LastMessageBoxCaption + L": " + g_LastMessageBoxText));
+			}
+
+			return std::unexpected(Win32Error(win32Error, context));
+		}
 
 		if (RebootRequired)
 		{
@@ -1499,7 +1568,9 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDriverStorePackage(
 			switch (newdev.CallFunction(newdev.fpDiUninstallDriverW, nullptr, normalisedInfPath, 0, &reboot))
 			{
 			case FunctionCallResult::NotAvailable:
-				return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION, "DiUninstallDriverW"));
+				return std::unexpected(newdev.GetLoadError() != ERROR_SUCCESS
+					                       ? Win32Error(newdev.GetLoadError(), "Failed to load Newdev.dll")
+					                       : Win32Error(ERROR_PROC_NOT_FOUND, "DiUninstallDriverW export not found"));
 			case FunctionCallResult::Failure:
 				if (driverStoreDeleteError)
 				{
@@ -1530,7 +1601,9 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDriverStorePackage(
 	switch (newdev.CallFunction(newdev.fpDiUninstallDriverW, nullptr, normalisedInfPath, 0, &reboot))
 	{
 	case FunctionCallResult::NotAvailable:
-		return std::unexpected(Win32Error(ERROR_INVALID_FUNCTION, "DiUninstallDriverW"));
+		return std::unexpected(newdev.GetLoadError() != ERROR_SUCCESS
+			                       ? Win32Error(newdev.GetLoadError(), "Failed to load Newdev.dll")
+			                       : Win32Error(ERROR_PROC_NOT_FOUND, "DiUninstallDriverW export not found"));
 	case FunctionCallResult::Failure:
 		return std::unexpected(Win32Error("DiUninstallDriverW"));
 	case FunctionCallResult::Success:
