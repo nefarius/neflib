@@ -17,12 +17,28 @@
 #include <nefarius/neflib/DeviceRestart.hpp>
 #include <nefarius/neflib/GenHandleGuard.hpp>
 #include <nefarius/neflib/MiscWinApi.hpp>
-
+#include <nefarius/neflib/Diagnostics.hpp>
+#include <nefarius/neflib/DiagnosticsFormat.hpp>
 
 using namespace nefarius::utilities;
 
 namespace
 {
+	//
+	// Thin wrapper so instrumented call sites read as a single statement instead of constructing
+	// a DiagnosticEvent inline every time. Level is almost always Verbose here: the final outcome
+	// of every public API in this file is already available to the caller via its return value
+	// (DeviceRestartResult/DetachResult/ReenumerateResult), so these events exist purely to make
+	// the intermediate steps (which strategy was tried, why it was rejected, ...) visible under a
+	// consumer's "--verbose"-equivalent flag, without duplicating the final summary a caller would
+	// otherwise log twice.
+	//
+	void EmitDiag(DiagnosticLevel level, DiagnosticPhase phase, std::string_view operation,
+	             const std::wstring& subject, std::optional<DWORD> win32Code, std::string message)
+	{
+		detail::EmitDiagnostic({level, phase, operation, subject, win32Code, std::move(message)});
+	}
+
 	//
 	// Bundles the outcome of a single restart strategy attempt, self-contained so it can be
 	// passed by value out of a worker thread without any references to the caller's stack.
@@ -76,6 +92,10 @@ namespace
 				// Fn is not expected to throw, but a stuck-thread caller can never be allowed
 				// to propagate an exception out of the no-throw contract of the public APIs.
 				// 
+				EmitDiag(DiagnosticLevel::Warning, DiagnosticPhase::Failure, "RunBounded", L"", ERROR_UNHANDLED_EXCEPTION,
+				        "A restart/detach strategy worker threw an unexpected C++ exception; this indicates a bug "
+				        "in neflib rather than a Win32 API failure");
+
 				TOutcome outcome;
 				outcome.Result = std::unexpected(Win32Error(ERROR_UNHANDLED_EXCEPTION));
 				return outcome;
@@ -724,6 +744,9 @@ nefarius::devcon::DetachResult nefarius::devcon::DetachDeviceInstance(
 	result.InstanceId = InstanceId;
 	result.FriendlyName = ::GetDeviceFriendlyNameBestEffort(InstanceId);
 
+	EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::Begin, "DetachDeviceInstance", InstanceId, std::nullopt,
+	        "Attempting to detach device sub-tree");
+
 	auto outcome = ::RunBounded<DetachOutcome>(Timeout, [InstanceId] { return ::TryDetachDevice(InstanceId); });
 
 	if (!outcome.has_value())
@@ -752,6 +775,9 @@ nefarius::devcon::ReenumerateResult nefarius::devcon::ReenumerateParentDevNode(
 {
 	ReenumerateResult result;
 	result.InstanceId = ParentInstanceId;
+
+	EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::Begin, "ReenumerateParentDevNode", ParentInstanceId,
+	        std::nullopt, "Attempting to re-enumerate parent devnode");
 
 	auto outcome = ::RunBounded<ReenumerateOutcome>(
 		Timeout, [ParentInstanceId] { return ::TryReenumerateParent(ParentInstanceId); });
@@ -1021,6 +1047,9 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 	result.InstanceId = InstanceId;
 	result.FriendlyName = ::GetDeviceFriendlyNameBestEffort(InstanceId);
 
+	EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::Begin, "RestartDeviceInstance", InstanceId, std::nullopt,
+	        "Attempting to bring device back online without a reboot");
+
 	struct Attempt
 	{
 		RestartStrategy Strategy;
@@ -1062,6 +1091,9 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 
 		result.LastAttempted = attempt.Strategy;
 
+		EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::Progress, "RestartDeviceInstance", InstanceId,
+		        std::nullopt, std::format("Attempting strategy: {}", ToString(attempt.Strategy)));
+
 		auto outcome = ::RunBounded<StrategyOutcome>(Options.PerDeviceTimeout, attempt.Fn);
 
 		if (!outcome.has_value())
@@ -1069,6 +1101,9 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 			//
 			// The worker may still be running; never start a second strategy racing against it
 			// 
+			EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::Failure, "RestartDeviceInstance", InstanceId,
+			        ERROR_TIMEOUT, std::format("Strategy {} timed out after {} ms", ToString(attempt.Strategy),
+			                                   Options.PerDeviceTimeout.count()));
 			result.TimedOut = true;
 			result.LastError = ERROR_TIMEOUT;
 			break;
@@ -1097,9 +1132,16 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 				result.Strategy = attempt.Strategy;
 				result.Succeeded = true;
 				result.LastError = ERROR_SUCCESS;
+				EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::End, "RestartDeviceInstance", InstanceId,
+				        std::nullopt, std::format("Strategy {} succeeded and was verified online",
+				                                  ToString(attempt.Strategy)));
 				break;
 			}
 
+			EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::Progress, "RestartDeviceInstance", InstanceId,
+			        std::nullopt, std::format(
+				        "Strategy {} reported success but the device did not verify online within {} ms; trying next strategy",
+				        ToString(attempt.Strategy), Options.PostRestartVerifyTimeout.count()));
 			result.LastError = ERROR_DEVICE_NOT_CONNECTED;
 			continue;
 		}
@@ -1107,6 +1149,14 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 		result.LastError = outcome->Result.error().getErrorCode();
 		result.VetoName = outcome->VetoName;
 		result.VetoType = outcome->VetoType;
+
+		EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::Failure, "RestartDeviceInstance", InstanceId,
+		        result.LastError,
+		        outcome->VetoName.empty()
+			        ? std::format("Strategy {} failed: {}", ToString(attempt.Strategy),
+			                     outcome->Result.error().getErrorMessageA())
+			        : std::format("Strategy {} vetoed by \"{}\"", ToString(attempt.Strategy),
+			                     ConvertWideToANSI(outcome->VetoName)));
 	}
 
 	//
@@ -1145,5 +1195,13 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 		}
 	}
 
+	//
+	// Deliberately no final End/Failure summary event here: RestartDeviceInstance's return value
+	// already carries everything a caller needs to log a single, authoritative outcome line (see
+	// DescribeDeviceRestartResult), and emitting an equivalent event here as well would either be
+	// invisible (if Verbose) or double-log the same outcome next to the caller's own summary (if
+	// not). The Begin/Progress events above exist purely to add intermediate detail a caller could
+	// not otherwise reconstruct from the return value alone.
+	//
 	return result;
 }

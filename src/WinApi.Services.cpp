@@ -2,6 +2,8 @@
 #include "pch.h"
 
 #include <nefarius/neflib/MiscWinApi.hpp>
+#include <nefarius/neflib/Diagnostics.hpp>
+#include <nefarius/neflib/UniUtil.hpp>
 
 using namespace nefarius::utilities;
 
@@ -413,6 +415,13 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverServiceW
 		{
 			return std::unexpected(result.error());
 		}
+
+		detail::EmitDiagnostic({
+			DiagnosticLevel::Verbose, DiagnosticPhase::Progress, "DeleteDriverServiceWithRetry",
+			ConvertToWide(ServiceName), errorCode,
+			std::format("Service deletion hit a transient error ({}); retrying",
+			           result.error().getErrorMessageA())
+		});
 
 		const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
 		Sleep(static_cast<DWORD>(std::min<std::chrono::milliseconds::rep>(100, remaining.count())));
