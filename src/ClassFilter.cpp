@@ -181,7 +181,10 @@ std::expected<void, Win32Error> nefarius::devcon::AddDeviceClassFilter(const GUI
 		return {};
 	}
 
-	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
+	// Any status other than ERROR_SUCCESS/ERROR_FILE_NOT_FOUND is unexpected but still a genuine
+	// registry error; preserve it (with the failing API name) instead of collapsing it to an
+	// opaque ERROR_INTERNAL_ERROR that hides what actually went wrong.
+	return std::unexpected(Win32Error(status, "RegQueryValueExW"));
 }
 
 template <nefarius::utilities::string_type StringType>
@@ -275,7 +278,9 @@ std::expected<void, Win32Error> nefarius::devcon::RemoveDeviceClassFilter(
 		return {};
 	}
 
-	return std::unexpected(Win32Error(ERROR_INTERNAL_ERROR));
+	// See AddDeviceClassFilter: preserve the actual registry status rather than reporting
+	// ERROR_INTERNAL_ERROR.
+	return std::unexpected(Win32Error(status, "RegQueryValueExW"));
 }
 
 template <nefarius::utilities::string_type StringType>
@@ -351,5 +356,8 @@ std::expected<bool, Win32Error> nefarius::devcon::HasDeviceClassFilter(const GUI
 		return false;
 	}
 
-	return std::unexpected(Win32Error());
+	// status is a registry status code returned directly by RegQueryValueExW, not something
+	// reflected via GetLastError(); Win32Error() defaulting to GetLastError() here would report
+	// whatever unrelated API last touched it instead of the actual failure.
+	return std::unexpected(Win32Error(status, "RegQueryValueExW"));
 }

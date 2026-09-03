@@ -135,6 +135,30 @@ My philosophy is having my code stay out of your project structures' and prefere
 
 This approach is also compatible with the (optional) use of precompiled headers 😎
 
+### Optional: diagnostics
+
+neflib never depends on a logging framework, but several multi-step operations (the device
+restart ladder, INF `[DefaultInstall]`/`[DefaultUninstall]` processing, driver service deletion
+retries, ...) have intermediate steps that are otherwise invisible - only the final
+`std::expected`/result-struct outcome is normally observable. If you want that detail (e.g. to
+feed your own "--verbose" flag), register a callback:
+
+```cpp
+#include <nefarius/neflib/Diagnostics.hpp>
+
+nefarius::utilities::SetDiagnosticCallback([](const nefarius::utilities::DiagnosticEvent& event)
+{
+    // Forward to whatever logging framework (or none) your application uses.
+    // event.Level, event.Phase, event.Operation, event.Subject, event.Win32Code, event.Message
+});
+```
+
+This is entirely opt-in: with no callback registered (the default), emitting a `DiagnosticEvent`
+is a no-op. See the comments in `Diagnostics.hpp` for the full thread-safety/re-entrancy contract.
+`DiagnosticsFormat.hpp` additionally provides plain formatting helpers (`ToString(RestartStrategy)`,
+`DescribeDeviceRestartResult`, ...) for the result structs in `DeviceRestart.hpp`, usable whether
+or not you register a diagnostics callback at all.
+
 ## Sources and 3rd party credits
 
 - [Windows Implementation Library](https://github.com/microsoft/wil)

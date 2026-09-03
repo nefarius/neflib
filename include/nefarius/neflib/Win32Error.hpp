@@ -28,7 +28,7 @@ namespace nefarius::utilities
 		[[nodiscard]] std::string getErrorMessageA() const
 		{
 			char* messageBuffer = nullptr;
-			size_t messageSize = FormatMessageA(
+			const size_t messageSize = FormatMessageA(
 				FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 				NULL,
 				errorCode,
@@ -38,8 +38,15 @@ namespace nefarius::utilities
 				NULL
 			);
 
-			std::string message(messageBuffer, messageSize);
-			LocalFree(messageBuffer);
+			// FormatMessageA can fail (e.g. an error code with no registered message table entry),
+			// in which case messageBuffer is left null; fall back to a numeric-only message instead
+			// of constructing a std::string from a null pointer.
+			std::string message = messageBuffer
+				? std::string(messageBuffer, messageSize)
+				: std::format("Unknown error 0x{:08X}", errorCode);
+
+			if (messageBuffer)
+				LocalFree(messageBuffer);
 
 			if (additionalMessage.empty())
 				return message;
@@ -55,7 +62,7 @@ namespace nefarius::utilities
 		[[nodiscard]] std::wstring getErrorMessageW() const
 		{
 			wchar_t* messageBuffer = nullptr;
-			size_t messageSize = FormatMessageW(
+			const size_t messageSize = FormatMessageW(
 				FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 				NULL,
 				errorCode,
@@ -65,8 +72,15 @@ namespace nefarius::utilities
 				NULL
 			);
 
-			std::wstring message(messageBuffer, messageSize);
-			LocalFree(messageBuffer);
+			// FormatMessageW can fail (e.g. an error code with no registered message table entry),
+			// in which case messageBuffer is left null; fall back to a numeric-only message instead
+			// of constructing a std::wstring from a null pointer.
+			std::wstring message = messageBuffer
+				? std::wstring(messageBuffer, messageSize)
+				: std::format(L"Unknown error 0x{:08X}", errorCode);
+
+			if (messageBuffer)
+				LocalFree(messageBuffer);
 
 			if (additionalMessage.empty())
 				return message;

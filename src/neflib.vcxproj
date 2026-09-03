@@ -243,6 +243,8 @@
     <ClInclude Include="..\include\nefarius\neflib\ClassFilter.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\Devcon.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\DeviceRestart.hpp" />
+    <ClInclude Include="..\include\nefarius\neflib\Diagnostics.hpp" />
+    <ClInclude Include="..\include\nefarius\neflib\DiagnosticsFormat.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\GenHandleGuard.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\HDEVINFOHandleGuard.hpp" />
     <ClInclude Include="..\include\nefarius\neflib\HKEYHandleGuard.hpp" />
@@ -261,6 +263,8 @@
     <ClCompile Include="ClassFilter.cpp" />
     <ClCompile Include="Devcon.cpp" />
     <ClCompile Include="DeviceRestart.cpp" />
+    <ClCompile Include="Diagnostics.cpp" />
+    <ClCompile Include="DiagnosticsFormat.cpp" />
     <ClCompile Include="MiscWinApi.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

@@ -55,3 +55,5 @@
 #include <nefarius/neflib/Devcon.hpp>
 #include <nefarius/neflib/DeviceRestart.hpp>
 #include <nefarius/neflib/MiscWinApi.hpp>
+#include <nefarius/neflib/Diagnostics.hpp>
+#include <nefarius/neflib/DiagnosticsFormat.hpp>
