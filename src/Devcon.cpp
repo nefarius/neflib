@@ -948,7 +948,15 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultInstall(
 					                                        : g_LastMessageBoxCaption + L": " + g_LastMessageBoxText));
 			}
 
-			return std::unexpected(Win32Error(win32Error, context));
+			//
+			// InstallHinfSectionW has no return value, and the intercepted dialog is the only
+			// reliable signal that this failed; GetLastError() may still read ERROR_SUCCESS from
+			// an unrelated earlier call. Reporting that as-is here would return an "unexpected
+			// success" error code to callers that propagate getErrorCode() as their own exit code.
+			// 
+			const DWORD effectiveError = (win32Error != ERROR_SUCCESS) ? win32Error : ERROR_FUNCTION_FAILED;
+
+			return std::unexpected(Win32Error(effectiveError, context));
 		}
 	}
 
@@ -1104,7 +1112,15 @@ std::expected<void, Win32Error> nefarius::devcon::InfDefaultUninstall(const Stri
 					                                        : g_LastMessageBoxCaption + L": " + g_LastMessageBoxText));
 			}
 
-			return std::unexpected(Win32Error(win32Error, context));
+			//
+			// See InfDefaultInstall's identical check: GetLastError() may still read
+			// ERROR_SUCCESS here even though the intercepted dialog proves this failed, and
+			// returning that as-is would report an "unexpected success" error code to callers
+			// that propagate getErrorCode() as their own exit code.
+			// 
+			const DWORD effectiveError = (win32Error != ERROR_SUCCESS) ? win32Error : ERROR_FUNCTION_FAILED;
+
+			return std::unexpected(Win32Error(effectiveError, context));
 		}
 
 		if (RebootRequired)

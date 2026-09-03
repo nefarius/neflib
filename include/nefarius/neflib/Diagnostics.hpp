@@ -96,7 +96,7 @@ namespace nefarius::utilities
 		///< Instance ID / service name / INF path this event refers to, if applicable; empty otherwise
 		std::wstring Subject;
 		///< Win32 error code associated with this event, if any
-		std::optional<DWORD> Win32Code;
+		std::optional<std::uint32_t> Win32Code;
 		///< Pre-formatted, human-readable detail text
 		std::string Message;
 	};
