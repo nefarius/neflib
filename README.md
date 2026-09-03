@@ -159,6 +159,58 @@ is a no-op. See the comments in `Diagnostics.hpp` for the full thread-safety/re-
 `DescribeDeviceRestartResult`, ...) for the result structs in `DeviceRestart.hpp`, usable whether
 or not you register a diagnostics callback at all.
 
+### Driver store package management
+
+`Devcon.hpp` exposes a small, self-contained API for inspecting and surgically removing packages
+from the offline Windows driver store (`%WINDIR%\System32\DriverStore\FileRepository`), without
+touching any device node - unlike `UninstallDriver`/`DiUninstallDriverW`, which also uninstall any
+device still using the driver.
+
+```cpp
+nefarius::devcon::DriverStorePackageFilter filter;
+filter.ClassGuid = myClassGuid;                     // optional
+filter.ServiceName = L"MyFilterService";            // optional; class filter registration only
+filter.OriginalInfNames = {L"mydriver.inf"};         // case-insensitive; at least one field required
+
+// Read-only: see exactly what a removal would affect first.
+if (const auto found = nefarius::devcon::FindDriverStorePackages(filter))
+{
+    for (const auto& pkg : found.value())
+    {
+        // pkg.DriverPackageInfPath, pkg.PublishedInfName, pkg.OriginalInfName, pkg.Provider,
+        // pkg.DriverVer, pkg.ClassGuid, pkg.ServiceNames
+    }
+}
+
+// Remove every matching package; a failure on one doesn't stop the others from being attempted.
+bool rebootRequired = false;
+if (const auto results = nefarius::devcon::RemoveDriverStorePackages(filter, &rebootRequired))
+{
+    for (const auto& result : results.value())
+    {
+        // result.Package, result.Removed, result.RebootRequired, result.Error
+    }
+}
+```
+
+Every populated `DriverStorePackageFilter` field must match (logical AND); a field that is
+populated but unreadable for a given candidate (e.g. its class can't be determined) is treated as
+a rejection, never a pass-through. A **fully empty filter is rejected** with
+`ERROR_INVALID_PARAMETER` so this can never be used to sweep the entire driver store. Matching
+proceeds from cheapest to most expensive criterion (a pure `OriginalInfNames` string comparison
+before any INF is opened, then `Provider`/`DriverVer`, then the more expensive class/service-target
+parse), so a large store with many candidates isn't paying for I/O on packages a cheap check
+already ruled out. `ServiceName` matches an `UpperFilters`/`LowerFilters` class filter registration
+(via `GetInfClassFilterTargets`) - it does **not** match a function driver's plain
+`[...Services] AddService` entry.
+
+`RemoveDriverStorePackage(FullInfPath, &rebootRequired)` remains available as a thin convenience
+wrapper for the common single-file case: it derives the exact `{OriginalInfNames, Provider,
+DriverVer}` identity from `FullInfPath` and delegates to `RemoveDriverStorePackages`, preserving
+its original single-package contract (already-absent is treated as success). Register a
+diagnostics callback (see above) to see exactly why each candidate matched or was rejected under
+`--verbose`.
+
 ## Sources and 3rd party credits
 
 - [Windows Implementation Library](https://github.com/microsoft/wil)
