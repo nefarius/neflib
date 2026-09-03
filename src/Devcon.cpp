@@ -1771,6 +1771,7 @@ nefarius::devcon::RemoveDriverStorePackages(const DriverStorePackageFilter& Filt
 
 	std::vector<DriverStorePackageRemoval> results;
 	results.reserve(packages->size());
+	bool anyRebootRequired = false;
 
 	for (auto& package : packages.value())
 	{
@@ -1791,12 +1792,18 @@ nefarius::devcon::RemoveDriverStorePackages(const DriverStorePackageFilter& Filt
 			          std::format("failed to remove package: {}", removeResult.error().getErrorMessageA()));
 		}
 
-		if (RebootRequired)
-		{
-			*RebootRequired = *RebootRequired || removal.RebootRequired;
-		}
+		anyRebootRequired = anyRebootRequired || removal.RebootRequired;
 
 		results.push_back(std::move(removal));
+	}
+
+	//
+	// Accumulated locally rather than read-modify-written directly on *RebootRequired, since the
+	// out parameter's initial contents are the caller's responsibility and must never be read.
+	// 
+	if (RebootRequired)
+	{
+		*RebootRequired = anyRebootRequired;
 	}
 
 	return results;
