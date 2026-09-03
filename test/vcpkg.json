@@ -4,7 +4,8 @@
   "description": "Targeted diagnostics tests for neflib.",
   "license": "MIT",
   "dependencies": [
-    "wil"
+    "wil",
+    "detours"
   ],
   "supports": "windows & static & !uwp"
 }

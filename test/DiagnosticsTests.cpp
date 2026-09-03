@@ -268,6 +268,12 @@ namespace
 	}
 }
 
+//
+// Defined in DriverStoreTests.cpp, which links into this same executable but intentionally does
+// not define its own main().
+//
+int RunDriverStoreTests();
+
 int main()
 {
 	Test_DefaultCallbackIsNoOp();
@@ -284,9 +290,13 @@ int main()
 	if (g_failures == 0)
 	{
 		std::printf("All neflib diagnostics tests passed.\n");
-		return 0;
+	}
+	else
+	{
+		std::fprintf(stderr, "%d neflib diagnostics test(s) failed.\n", g_failures);
 	}
 
-	std::fprintf(stderr, "%d neflib diagnostics test(s) failed.\n", g_failures);
-	return 1;
+	const int driverStoreFailures = RunDriverStoreTests();
+
+	return (g_failures == 0 && driverStoreFailures == 0) ? 0 : 1;
 }
