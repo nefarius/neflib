@@ -86,6 +86,11 @@ std::string nefarius::devcon::DescribeDeviceRestartResult(const DeviceRestartRes
 	const std::wstring displayName = result.FriendlyName.empty() ? result.InstanceId : result.FriendlyName;
 	const std::string displayNameA = ConvertWideToANSI(displayName);
 
+	if (result.SkipReason == DeviceRestartSkipReason::AcpiDevice)
+	{
+		return std::format("Skipped restart for ACPI device \"{}\"", displayNameA);
+	}
+
 	if (result.Succeeded)
 	{
 		return std::format("Restarted device \"{}\" via {}", displayNameA, ToString(result.Strategy));

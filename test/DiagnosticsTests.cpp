@@ -53,6 +53,8 @@
 #include <nefarius/neflib/Diagnostics.hpp>
 #include <nefarius/neflib/DiagnosticsFormat.hpp>
 
+#include "../src/DeviceRestartInternal.hpp"
+
 #include <cstdio>
 #include <cstdlib>
 #include <atomic>
@@ -207,6 +209,39 @@ namespace
 		CHECK(description.find("property change") != std::string::npos);
 	}
 
+	void Test_AcpiRestartPolicy()
+	{
+		DeviceRestartOptions options;
+
+		CHECK(restart_detail::IsAcpiDeviceInstanceId(L"ACPI\\TEST_DEVICE\\0001"));
+		CHECK(restart_detail::IsAcpiDeviceInstanceId(L"acpi\\test_device\\0001"));
+		CHECK(!restart_detail::IsAcpiDeviceInstanceId(L"USB\\TEST_DEVICE\\0001"));
+		CHECK(!restart_detail::IsAcpiDeviceInstanceId(L"PCI\\TEST_DEVICE\\0001"));
+		CHECK(!restart_detail::IsAcpiDeviceInstanceId(L"HID\\TEST_DEVICE\\0001"));
+		CHECK(!restart_detail::IsAcpiDeviceInstanceId(L"ROOT\\TEST_DEVICE\\0001"));
+
+		CHECK(restart_detail::GetDeviceRestartSkipReason(L"ACPI\\TEST_DEVICE\\0001", options)
+			== DeviceRestartSkipReason::AcpiDevice);
+
+		options.AllowAcpiDeviceRestart = true;
+		CHECK(restart_detail::GetDeviceRestartSkipReason(L"ACPI\\TEST_DEVICE\\0001", options)
+			== DeviceRestartSkipReason::None);
+	}
+
+	void Test_DescribeDeviceRestartResult_SkippedAcpi()
+	{
+		DeviceRestartResult result;
+		result.InstanceId = L"ACPI\\TEST_DEVICE\\0001";
+		result.FriendlyName = L"Test ACPI Device";
+		result.SkipReason = DeviceRestartSkipReason::AcpiDevice;
+
+		const std::string description = DescribeDeviceRestartResult(result);
+
+		CHECK(description.find("Skipped restart") != std::string::npos);
+		CHECK(description.find("Test ACPI Device") != std::string::npos);
+		CHECK(description.find("via none") == std::string::npos);
+	}
+
 	void Test_DescribeDeviceRestartResult_Veto()
 	{
 		DeviceRestartResult result;
@@ -282,6 +317,8 @@ int main()
 	Test_ConcurrentSetAndEmitDoesNotCrash();
 	Test_ToString_AllStrategies();
 	Test_DescribeDeviceRestartResult_Success();
+	Test_AcpiRestartPolicy();
+	Test_DescribeDeviceRestartResult_SkippedAcpi();
 	Test_DescribeDeviceRestartResult_Veto();
 	Test_DescribeDeviceRestartResult_NotPresent();
 	Test_DescribeDetachResult();
