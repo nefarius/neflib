@@ -20,6 +20,8 @@
 #include <nefarius/neflib/Diagnostics.hpp>
 #include <nefarius/neflib/DiagnosticsFormat.hpp>
 
+#include "DeviceRestartInternal.hpp"
+
 using namespace nefarius::utilities;
 
 namespace
@@ -1048,7 +1050,30 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 	result.FriendlyName = ::GetDeviceFriendlyNameBestEffort(InstanceId);
 
 	EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::Begin, "RestartDeviceInstance", InstanceId, std::nullopt,
-	        "Attempting to bring device back online without a reboot");
+	         "Evaluating device restart policy");
+
+	result.SkipReason = restart_detail::GetDeviceRestartSkipReason(InstanceId, Options);
+
+	if (result.SkipReason != DeviceRestartSkipReason::None)
+	{
+		const auto observation = ::PollDevNodeStatus(InstanceId, Options.PostRestartVerifyTimeout);
+
+		result.DevicePresent = observation.Located;
+		result.FinalStatusValid = observation.StatusValid;
+		result.FinalStatusError = observation.StatusError;
+
+		if (observation.StatusValid)
+		{
+			result.FinalStarted = observation.Started;
+			result.FinalHasProblem = observation.HasProblem;
+			result.FinalProblemCode = observation.ProblemCode;
+		}
+
+		return result;
+	}
+
+	EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::Progress, "RestartDeviceInstance", InstanceId, std::nullopt,
+	         "Attempting to bring device back online without a reboot");
 
 	struct Attempt
 	{

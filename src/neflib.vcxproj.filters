@@ -36,6 +36,9 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DeviceRestartInternal.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\nefarius\neflib\LibraryHelper.hpp">
       <Filter>Header Files\Public</Filter>
     </ClInclude>

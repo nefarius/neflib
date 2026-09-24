@@ -28,6 +28,17 @@ namespace nefarius::devcon
 	};
 
 	/**
+	 * Explains why RestartDeviceInstance deliberately did not attempt a restart.
+	 */
+	enum class DeviceRestartSkipReason
+	{
+		///< The restart was not skipped
+		None,
+		///< ACPI-enumerated devices are skipped unless explicitly enabled by the caller
+		AcpiDevice
+	};
+
+	/**
 	 * Tuning knobs for RestartDeviceInstance.
 	 *
 	 * @author	Benjamin "Nefarius" Hoeglinger-Stelzer
@@ -46,6 +57,10 @@ namespace nefarius::devcon
 		bool AllowPropertyChange = true;
 		///< Allow attempting a query-remove + re-enumerate of the parent devnode
 		bool AllowRemoveAndReenumerate = true;
+		///< Allow restart attempts for ACPI-enumerated devices. Disabled by default because
+		///< restarting these devices can cause Windows to request a system restart even when
+		///< the surrounding operation completed successfully.
+		bool AllowAcpiDeviceRestart = false;
 	};
 
 	/**
@@ -71,7 +86,10 @@ namespace nefarius::devcon
 		bool TimedOut = false;
 		///< True if Windows reported DI_NEEDRESTART/DI_NEEDREBOOT for this device regardless of Succeeded
 		bool RebootRequired = false;
-		///< Win32 error code of the last failed attempt, ERROR_SUCCESS if Succeeded
+		///< Why no restart strategy was attempted; None when normal strategy processing ran
+		DeviceRestartSkipReason SkipReason = DeviceRestartSkipReason::None;
+		///< Win32 error code of the last failed attempt; cleared to ERROR_SUCCESS when the device
+		///< is successfully restarted and verified online, or when no strategy failed
 		DWORD LastError = ERROR_SUCCESS;
 		///< Populated with the blocking driver/application name if a query-remove was vetoed
 		std::wstring VetoName;
@@ -282,7 +300,10 @@ namespace nefarius::devcon
 	 * strategies in order of reliability rather than of invasiveness: a USB hub port cycle first
 	 * (the only strategy that works on a device with a handle held open elsewhere, e.g. a
 	 * keyboard), then a software property-change restart, and finally the most invasive removal
-	 * and re-enumeration of the parent devnode as a last resort. Each attempt is bounded by
+	 * and re-enumeration of the parent devnode as a last resort. By default, ACPI-enumerated
+	 * devices are deliberately skipped before any strategy runs because attempting to restart
+	 * them can make Windows request a system restart; callers that specifically need the legacy
+	 * behavior can enable DeviceRestartOptions::AllowAcpiDeviceRestart. Each attempt is bounded by
 	 * DeviceRestartOptions::PerDeviceTimeout so that a stuck driver can never block the caller
 	 * forever. A strategy reporting success is never trusted blindly: the devnode is polled
 	 * (bounded by DeviceRestartOptions::PostRestartVerifyTimeout) to confirm it actually came
