@@ -1056,7 +1056,7 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 
 	if (result.SkipReason != DeviceRestartSkipReason::None)
 	{
-		const auto observation = ::PollDevNodeStatus(InstanceId, std::chrono::milliseconds::zero());
+		const auto observation = ::PollDevNodeStatus(InstanceId, Options.PostRestartVerifyTimeout);
 
 		result.DevicePresent = observation.Located;
 		result.FinalStatusValid = observation.StatusValid;
@@ -1069,8 +1069,6 @@ nefarius::devcon::DeviceRestartResult nefarius::devcon::RestartDeviceInstance(
 			result.FinalProblemCode = observation.ProblemCode;
 		}
 
-		EmitDiag(DiagnosticLevel::Verbose, DiagnosticPhase::End, "RestartDeviceInstance", InstanceId,
-		         std::nullopt, "Skipping restart for an ACPI-enumerated device");
 		return result;
 	}
 

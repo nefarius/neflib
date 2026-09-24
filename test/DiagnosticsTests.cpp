@@ -228,6 +228,48 @@ namespace
 			== DeviceRestartSkipReason::None);
 	}
 
+	void Test_AcpiRestartCallerPolicy()
+	{
+		DeviceRestartOptions options;
+		options.PostRestartVerifyTimeout = std::chrono::milliseconds::zero();
+		options.AllowUsbPortCycle = false;
+		options.AllowPropertyChange = false;
+		options.AllowRemoveAndReenumerate = false;
+
+		std::vector<DiagnosticEvent> received;
+		SetDiagnosticCallback([&received](const DiagnosticEvent& event)
+		{
+			received.push_back(event);
+		});
+
+		const auto skipped = RestartDeviceInstance(L"ACPI\\TEST_DEVICE\\0001", options);
+		CHECK(skipped.SkipReason == DeviceRestartSkipReason::AcpiDevice);
+		CHECK(skipped.LastAttempted == RestartStrategy::None);
+		CHECK(std::ranges::none_of(received, [](const DiagnosticEvent& event)
+		{
+			return event.Operation == "RestartDeviceInstance" && event.Phase == DiagnosticPhase::Progress;
+		}));
+
+		received.clear();
+		options.AllowAcpiDeviceRestart = true;
+
+		const auto allowed = RestartDeviceInstance(L"ACPI\\TEST_DEVICE\\0001", options);
+		CHECK(allowed.SkipReason == DeviceRestartSkipReason::None);
+		CHECK(allowed.LastAttempted == RestartStrategy::None);
+		CHECK(std::ranges::any_of(received, [](const DiagnosticEvent& event)
+		{
+			return event.Operation == "RestartDeviceInstance" && event.Phase == DiagnosticPhase::Progress
+				&& event.Message == "Attempting to bring device back online without a reboot";
+		}));
+		CHECK(std::ranges::none_of(received, [](const DiagnosticEvent& event)
+		{
+			return event.Operation == "RestartDeviceInstance"
+				&& event.Message.starts_with("Attempting strategy:");
+		}));
+
+		ClearDiagnosticCallback();
+	}
+
 	void Test_DescribeDeviceRestartResult_SkippedAcpi()
 	{
 		DeviceRestartResult result;
@@ -318,6 +360,7 @@ int main()
 	Test_ToString_AllStrategies();
 	Test_DescribeDeviceRestartResult_Success();
 	Test_AcpiRestartPolicy();
+	Test_AcpiRestartCallerPolicy();
 	Test_DescribeDeviceRestartResult_SkippedAcpi();
 	Test_DescribeDeviceRestartResult_Veto();
 	Test_DescribeDeviceRestartResult_NotPresent();
