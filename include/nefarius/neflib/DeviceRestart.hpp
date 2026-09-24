@@ -88,7 +88,8 @@ namespace nefarius::devcon
 		bool RebootRequired = false;
 		///< Why no restart strategy was attempted; None when normal strategy processing ran
 		DeviceRestartSkipReason SkipReason = DeviceRestartSkipReason::None;
-		///< Win32 error code of the last failed attempt, or ERROR_SUCCESS if no strategy failed
+		///< Win32 error code of the last failed attempt; cleared to ERROR_SUCCESS when the device
+		///< is successfully restarted and verified online, or when no strategy failed
 		DWORD LastError = ERROR_SUCCESS;
 		///< Populated with the blocking driver/application name if a query-remove was vetoed
 		std::wstring VetoName;
