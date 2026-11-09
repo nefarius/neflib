@@ -195,7 +195,13 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverService(
 				                                  "Timed out waiting for service to stop"));
 			}
 
-			Sleep(std::clamp(status.dwWaitHint / 10, 50UL, 1000UL));
+			const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+				deadline - std::chrono::steady_clock::now());
+			if (remaining <= std::chrono::milliseconds::zero())
+				return std::unexpected(Win32Error(ERROR_SERVICE_REQUEST_TIMEOUT,
+				                                  "Timed out waiting for service to stop"));
+			Sleep(static_cast<DWORD>(std::min<std::chrono::milliseconds::rep>(
+				std::clamp(status.dwWaitHint / 10, 50UL, 1000UL), remaining.count())));
 
 			if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, reinterpret_cast<BYTE*>(&status),
 			                         sizeof(status), &bytesNeeded))
