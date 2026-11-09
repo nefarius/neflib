@@ -246,7 +246,7 @@ std::expected<SERVICE_STATUS_PROCESS, Win32Error> nefarius::winapi::services::Ge
 	                    CloseServiceHandle(svc);
 	                    if (sch)
 	                    CloseServiceHandle(sch);
-	                    }, svc, sch);
+	                    }, &svc, &sch);
 
 	sch = OpenSCManagerW(
 		nullptr,
