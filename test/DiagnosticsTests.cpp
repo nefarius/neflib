@@ -350,6 +350,7 @@ namespace
 // not define its own main().
 //
 int RunDriverStoreTests();
+int RunServiceRemovalTests();
 
 int main()
 {
@@ -378,5 +379,6 @@ int main()
 
 	const int driverStoreFailures = RunDriverStoreTests();
 
-	return (g_failures == 0 && driverStoreFailures == 0) ? 0 : 1;
+	const int serviceRemovalFailures = RunServiceRemovalTests();
+	return (g_failures == 0 && driverStoreFailures == 0 && serviceRemovalFailures == 0) ? 0 : 1;
 }

@@ -4,6 +4,7 @@
 #include <nefarius/neflib/MiscWinApi.hpp>
 #include <nefarius/neflib/Diagnostics.hpp>
 #include <nefarius/neflib/UniUtil.hpp>
+#include "ServiceRemovalInternal.hpp"
 
 using namespace nefarius::utilities;
 
@@ -371,69 +372,38 @@ std::expected<void, Win32Error> nefarius::winapi::services::DeleteDriverServiceW
 	const StringType& ServiceName, std::chrono::milliseconds StopTimeout, std::chrono::milliseconds RetryTimeout,
 	bool* RebootRequired)
 {
-	if (RebootRequired)
-	{
-		*RebootRequired = false;
-	}
-
-	const auto deadline = std::chrono::steady_clock::now() + RetryTimeout;
-
-	for (;;)
-	{
-		auto result = DeleteDriverService(ServiceName, StopTimeout, RebootRequired);
-
-		if (result)
-		{
-			return {};
-		}
-
-		const DWORD errorCode = result.error().getErrorCode();
-
-		//
-		// A concurrent/previous attempt already deleted it; that is success, not failure, for an
-		// idempotent "make sure it's gone" operation.
-		// 
-		if (errorCode == ERROR_SERVICE_DOES_NOT_EXIST)
-		{
-			return {};
-		}
-
-		//
-		// These are the transient errors observed in the brief window after a filter driver's
-		// last bound device has been detached/restarted, before the kernel has fully released the
-		// driver image; retrying after a short backoff resolves them without a caller-visible
-		// failure. Anything else (e.g. a genuine permissions problem) is returned immediately.
-		// 
-		const bool transient = (errorCode == ERROR_SERVICE_MARKED_FOR_DELETE) ||
-			(errorCode == ERROR_SHARING_VIOLATION) ||
-			(errorCode == ERROR_SERVICE_REQUEST_TIMEOUT) ||
-			(errorCode == ERROR_SERVICE_CANNOT_ACCEPT_CTRL);
-
-		const auto now = std::chrono::steady_clock::now();
-
-		if (!transient || now >= deadline)
-		{
-			return std::unexpected(result.error());
-		}
-
-		detail::EmitDiagnostic({
-			DiagnosticLevel::Verbose, DiagnosticPhase::Progress, "DeleteDriverServiceWithRetry",
-			ConvertToWide(ServiceName), errorCode,
-			std::format("Service deletion hit a transient error ({}); retrying",
-			           result.error().getErrorMessageA())
-		});
-
-		const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
-		Sleep(static_cast<DWORD>(std::min<std::chrono::milliseconds::rep>(100, remaining.count())));
-
-		//
-		// Don't start another DeleteDriverService attempt (which can itself block for up to
-		// StopTimeout) once the retry budget is already spent; return the transient error from
-		// this attempt instead of overshooting RetryTimeout.
-		// 
-		if (std::chrono::steady_clock::now() >= deadline)
-		{
-			return std::unexpected(result.error());
-		}
-	}
+    if (RebootRequired)
+        *RebootRequired = false;
+    class ScmOperations final : public detail::RemovalOperations
+    {
+        const StringType& m_name;
+    public:
+        explicit ScmOperations(const StringType& name) : m_name(name) {}
+        DWORD RequestDeletion(Milliseconds timeout) override
+        {
+            // The low-level function's SCM handles are closed before it returns.
+            const auto result = DeleteDriverService(m_name, timeout);
+            return result ? ERROR_SUCCESS : result.error().getErrorCode();
+        }
+        DWORD ProbeRegistration() override
+        {
+            const auto result = GetServiceStatus(m_name);
+            return result ? ERROR_SUCCESS : result.error().getErrorCode();
+        }
+        TimePoint Now() override { return std::chrono::steady_clock::now(); }
+        void Delay(Milliseconds duration) override { Sleep(static_cast<DWORD>(duration.count())); }
+    } operations(ServiceName);
+    const auto result = detail::RemoveAndWait(operations, StopTimeout, RetryTimeout);
+    if (!result)
+        return std::unexpected(Win32Error(result.error(), "DeleteDriverServiceWithRetry"));
+    if (*result == detail::RemovalState::PendingDeletion)
+    {
+        nefarius::utilities::detail::EmitDiagnostic({DiagnosticLevel::Warning, DiagnosticPhase::End,
+            "DeleteDriverServiceWithRetry", ConvertToWide(ServiceName), ERROR_SERVICE_MARKED_FOR_DELETE,
+            "Deletion accepted but SCM registration remains; restart before reinstalling"});
+        if (!RebootRequired)
+            return std::unexpected(Win32Error(ERROR_SERVICE_MARKED_FOR_DELETE, "Service removal remains pending"));
+        *RebootRequired = true;
+    }
+    return {};
 }

@@ -172,13 +172,14 @@ namespace nefarius::winapi
 		WaitForServiceState(const std::string& ServiceName, DWORD DesiredState, std::chrono::milliseconds Timeout);
 
 		//
-		// Wraps DeleteDriverService in a bounded retry loop, absorbing the brief window after a
-		// filter driver's last bound device has been detached/restarted where the kernel has not
-		// yet fully released the driver image; without this, a caller that removes the class
-		// filter and immediately deletes the service can observe a spurious transient failure.
-		// ERROR_SERVICE_DOES_NOT_EXIST is treated as success (already gone). Existing
-		// DeleteDriverService is untouched, so --remove-driver-service's behavior is unaffected.
-		// 
+		// Requests deletion and confirms the SCM registration disappears after deletion handles close.
+		// StopTimeout + RetryTimeout bounds stop attempts, retries and completion polling together.
+		// Success with *RebootRequired=false means absent. Success with true means deletion was
+		// accepted but remains pending at the deadline: restart before reinstalling. Without that
+		// output parameter, pending deletion returns ERROR_SERVICE_MARKED_FOR_DELETE instead.
+		// Query errors remain errors; unsupported live stop alone never requests a reboot.
+		// The lower-level DeleteDriverService retains its request-only behavior.
+		//
 		template <nefarius::utilities::string_type StringType>
 		std::expected<void, nefarius::utilities::Win32Error> DeleteDriverServiceWithRetry(
 			const StringType& ServiceName, std::chrono::milliseconds StopTimeout = std::chrono::seconds(10),
